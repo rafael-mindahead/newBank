@@ -1,1 +1,32 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Java / Maven
+**/target/
+*.class
+*.log
+
+# PHP
+**/vendor/
+
+# Frontend/mobile
+**/node_modules/
+**/dist/
+**/build/
+.gradle/
+**/.dart_tool/
+**/Pods/
+**/DerivedData/
+
+# Editors / OS
+.DS_Store
 .DS_STORE
+.idea/
+.vscode/
+*.iml
+
+# Local databases
+*.sqlite
+*.db

@@ -1,0 +1,7 @@
+TIPO;DESCRICAO;VALOR;DATA;CATEGORIA
+RECEITA;Salario Mensal;4500.00;2026-11-01;Trabalho
+RECEITA;Freelance Web;1200.50;2026-11-03;Extra
+DESPESA;Aluguel Apartamento;1800.00;2026-11-05;Moradia
+DESPESA;Supermercado Mensal;650.25;2026-11-06;Alimentacao
+DESPESA;Conta de Energia;185.40;2026-11-07;Moradia
+

@@ -1,0 +1,160 @@
+openapi: 3.0.3
+info:
+  title: FinanceHub API
+  version: 1.0.0
+  description: >
+    Contrato HTTP entre clientes (Web, Android, iOS), o gateway PHP e o monólito Java 21.
+    Dinheiro exposto em centavos inteiros e datas em formato ISO-8601 (YYYY-MM-DD).
+servers:
+  - url: /api/v1
+paths:
+  /health:
+    get:
+      summary: Verifica a saúde do serviço e modo de persistência ativo
+      responses:
+        '200':
+          description: Serviço operacional
+  /categorias:
+    get:
+      summary: Lista todas as categorias cadastradas
+      responses:
+        '200':
+          description: Lista de categorias em JSON
+    post:
+      summary: Cadastra uma nova categoria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome]
+              properties:
+                nome:
+                  type: string
+                  example: Investimentos
+      responses:
+        '201':
+          description: Categoria criada
+        '400':
+          description: Erro de validação
+  /categorias/{id}:
+    delete:
+      summary: Remove uma categoria pelo ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Categoria removida
+        '404':
+          description: Categoria não encontrada
+  /lancamentos:
+    get:
+      summary: Lista lançamentos (receitas e despesas), com filtro opcional por período
+      parameters:
+        - name: inicio
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: fim
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista de lançamentos
+    post:
+      summary: Cadastra uma nova Receita ou Despesa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tipo, descricao, valorCentavos, data]
+              properties:
+                tipo:
+                  type: string
+                  enum: [RECEITA, DESPESA]
+                descricao:
+                  type: string
+                  example: Salario Mensal
+                valorCentavos:
+                  type: integer
+                  example: 450000
+                data:
+                  type: string
+                  format: date
+                  example: 2026-11-08
+                categoriaId:
+                  type: integer
+                  example: 1
+      responses:
+        '201':
+          description: Lançamento criado
+        '400':
+          description: Erro de validação (FinanceHubException)
+  /lancamentos/{id}:
+    delete:
+      summary: Remove um lançamento pelo ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lançamento removido
+        '404':
+          description: Lançamento não encontrado
+  /relatorios:
+    get:
+      summary: Retorna o relatório financeiro consolidado (receitas, despesas e saldo total)
+      parameters:
+        - name: inicio
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: fim
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Relatório consolidado em centavos e valores formatados
+  /importacao:
+    post:
+      summary: Importa lançamentos a partir de conteúdo CSV ou TXT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [csv]
+              properties:
+                csv:
+                  type: string
+                  example: "RECEITA;Salario;3500.00;2026-11-01;Trabalho"
+      responses:
+        '201':
+          description: Lançamentos importados com sucesso
+  /exportacao:
+    get:
+      summary: Exporta os lançamentos cadastrados em arquivo CSV
+      responses:
+        '200':
+          description: Arquivo CSV UTF-8

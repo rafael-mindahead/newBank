@@ -11,11 +11,15 @@ Controle de receitas, despesas, categorias, histórico, importação/exportaçã
 - **docs/** — arquitetura, checklist dos requisitos e diagramas (`docs/diagrams/diagramas-pjbl.md`).
 
 ## Como executar a Interface Gráfica Desktop (Java Swing)
-Na raiz do projeto, execute no PowerShell:
+Na raiz do projeto, execute:
 ```powershell
-.\scripts\iniciar-servidor.ps1
+.\ABRIR_FINANCEHUB.bat
 ```
-*(Ou via Maven dentro de `backend-java/`: `mvn compile exec:java -Dexec.mainClass="br.com.financehub.app.FinanceHubApplication"`).*
+Ou diretamente pelo Java:
+```powershell
+java -jar backend-java\target\financehub-core-0.1.0-SNAPSHOT.jar
+```
+*(Ou via PowerShell: `powershell -ExecutionPolicy Bypass -File .\scripts\iniciar-servidor.ps1`).*
 
 ## Como executar os testes (JUnit 5)
 No diretório `backend-java/`:

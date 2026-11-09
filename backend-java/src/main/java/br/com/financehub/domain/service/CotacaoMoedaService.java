@@ -10,13 +10,14 @@ import java.time.Duration;
 
 /**
  * Serviço que consulta uma API pública externa (AwesomeAPI) para obter
- * a cotação atual do Dólar (USD-BRL) e converter o saldo do usuário.
+ * a cotação atual do Dólar (USD-BRL) e do Euro (EUR-BRL).
  * Atende ao recurso extra "Integração com API".
  */
 public class CotacaoMoedaService {
 
-    private static final String URL_API_COTACAO = "https://economia.awesomeapi.com.br/json/last/USD-BRL";
+    private static final String URL_API_COTACAO = "https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL";
     private BigDecimal ultimaCotacaoDolar = new BigDecimal("5.75");
+    private BigDecimal ultimaCotacaoEuro = new BigDecimal("6.20");
     private boolean obtidaDaApiOnline = false;
 
     public BigDecimal buscarCotacaoDolarAtual() {
@@ -33,11 +34,15 @@ public class CotacaoMoedaService {
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
-                BigDecimal extraido = extrairValorBidDoJson(response.body());
-                if (extraido != null && extraido.compareTo(BigDecimal.ZERO) > 0) {
-                    this.ultimaCotacaoDolar = extraido.setScale(2, RoundingMode.HALF_UP);
+                String body = response.body();
+                BigDecimal usd = extrairBidDaMoeda(body, "USDBRL");
+                BigDecimal eur = extrairBidDaMoeda(body, "EURBRL");
+                if (usd != null && usd.compareTo(BigDecimal.ZERO) > 0) {
+                    this.ultimaCotacaoDolar = usd.setScale(2, RoundingMode.HALF_UP);
                     this.obtidaDaApiOnline = true;
-                    return this.ultimaCotacaoDolar;
+                }
+                if (eur != null && eur.compareTo(BigDecimal.ZERO) > 0) {
+                    this.ultimaCotacaoEuro = eur.setScale(2, RoundingMode.HALF_UP);
                 }
             }
         } catch (Exception e) {
@@ -53,20 +58,35 @@ public class CotacaoMoedaService {
         return valorEmReais.divide(this.ultimaCotacaoDolar, 2, RoundingMode.HALF_UP);
     }
 
+    public BigDecimal converterReaisParaEuro(BigDecimal valorEmReais) {
+        if (valorEmReais == null || this.ultimaCotacaoEuro.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return valorEmReais.divide(this.ultimaCotacaoEuro, 2, RoundingMode.HALF_UP);
+    }
+
     public BigDecimal getUltimaCotacaoDolar() {
         return this.ultimaCotacaoDolar;
+    }
+
+    public BigDecimal getUltimaCotacaoEuro() {
+        return this.ultimaCotacaoEuro;
     }
 
     public boolean isObtidaDaApiOnline() {
         return this.obtidaDaApiOnline;
     }
 
-    private BigDecimal extrairValorBidDoJson(String json) {
+    private BigDecimal extrairBidDaMoeda(String json, String chaveMoeda) {
         if (json == null) {
             return null;
         }
+        int posMoeda = json.indexOf("\"" + chaveMoeda + "\"");
+        if (posMoeda < 0) {
+            posMoeda = 0;
+        }
         String marcador = "\"bid\":\"";
-        int inicio = json.indexOf(marcador);
+        int inicio = json.indexOf(marcador, posMoeda);
         if (inicio < 0) {
             return null;
         }

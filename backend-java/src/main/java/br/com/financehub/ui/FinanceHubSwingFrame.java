@@ -22,7 +22,6 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -31,7 +30,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
-import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -45,6 +43,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -52,6 +51,8 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Path;
@@ -62,31 +63,32 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Interface gráfica principal do FinanceHub em Java Swing.
- * Paleta visual: Preto, Cinza Escuro e Ciano.
+ * Interface gráfica completa do FinanceHub em Java Swing.
+ * Tema escuro financeiro: Preto, Cinza Escuro e Ciano.
  */
 public class FinanceHubSwingFrame extends JFrame {
 
     // Paleta de cores (Preto, Cinza e Ciano)
-    private static final Color BG_PRETO = new Color(9, 13, 20);
-    private static final Color BG_CAMPO = new Color(15, 20, 30);
-    private static final Color CARD_CINZA = new Color(20, 26, 36);
-    private static final Color CARD_CINZA_CLARO = new Color(28, 36, 48);
-    private static final Color BORDA_CINZA = new Color(45, 56, 72);
-    private static final Color TEXTO_CLARO = new Color(235, 242, 248);
-    private static final Color TEXTO_CINZA = new Color(148, 163, 184);
+    private static final Color BG_PRETO = new Color(8, 11, 16);
+    private static final Color BG_CAMPO = new Color(13, 18, 26);
+    private static final Color CARD_CINZA = new Color(17, 23, 33);
+    private static final Color CARD_CINZA_CLARO = new Color(25, 34, 48);
+    private static final Color BORDA_CINZA = new Color(40, 52, 70);
+    private static final Color TEXTO_CLARO = new Color(238, 244, 250);
+    private static final Color TEXTO_CINZA = new Color(142, 158, 180);
     private static final Color CIANO_VIVO = new Color(34, 211, 238);
     private static final Color CIANO_ESCURO = new Color(6, 182, 212);
     private static final Color VERDE_RECEITA = new Color(45, 212, 191);
     private static final Color CORAL_DESPESA = new Color(248, 113, 113);
+    private static final Color AMBAR_ALERTA = new Color(251, 191, 36);
 
     private static final Font FONTE_TITULO = new Font("Segoe UI", Font.BOLD, 19);
     private static final Font FONTE_SECAO = new Font("Segoe UI", Font.BOLD, 14);
-    private static final Font FONTE_VALOR_CARD = new Font("Segoe UI", Font.BOLD, 22);
+    private static final Font FONTE_VALOR_CARD = new Font("Segoe UI", Font.BOLD, 21);
     private static final Font FONTE_ROTULO = new Font("Segoe UI", Font.BOLD, 11);
     private static final Font FONTE_TEXTO = new Font("Segoe UI", Font.PLAIN, 13);
 
-    // Objetos de domínio, serviços e contrato de persistência (Interface)
+    // Domínio, serviços e contrato de persistência
     private final Usuario usuarioAtual;
     private final GerenciadorCategorias gerenciadorCategorias;
     private final GerenciadorLancamentos gerenciadorLancamentos;
@@ -97,23 +99,39 @@ public class FinanceHubSwingFrame extends JFrame {
     private final NumberFormat moedaBRL = NumberFormat.getCurrencyInstance(Locale.of("pt", "BR"));
     private final NumberFormat moedaUSD = NumberFormat.getCurrencyInstance(Locale.US);
 
-    // Componentes do topo e cards
+    // Componentes do topo e 5 cards de resumo
     private JLabel lblUsuarioTopo;
     private JLabel lblCotacaoTopo;
+
     private JLabel lblValorReceitas;
     private JLabel lblQtdReceitas;
     private JProgressBar barraReceitas;
+
     private JLabel lblValorDespesas;
     private JLabel lblQtdDespesas;
     private JProgressBar barraDespesas;
+
     private JLabel lblValorSaldo;
-    private JLabel lblQtdTotal;
+    private JLabel lblTaxaPoupanca;
+    private JProgressBar barraPoupanca;
+
+    private JLabel lblValorMeta;
+    private JLabel lblDetalheMeta;
+    private JProgressBar barraMetaGastos;
+
     private JLabel lblValorSaldoDolar;
-    private JLabel lblDetalheDolar;
+    private JLabel lblDetalheCambio;
+
     private JLabel lblResumoGeral;
 
-    // Abas e formulários
-    private JTabbedPane abasLateral;
+    // Navegação lateral customizada (sem bordas brancas do JTabbedPane)
+    private CardLayout cardLayoutLateral;
+    private JPanel painelConteudoLateral;
+    private JButton btnAbaLancamento;
+    private JButton btnAbaCategorias;
+    private JButton btnAbaImportar;
+
+    // Formulário de lançamento
     private Long idEmEdicao = null;
     private JLabel lblModoFormulario;
     private JComboBox<String> cmbTipo;
@@ -139,6 +157,13 @@ public class FinanceHubSwingFrame extends JFrame {
     private DefaultTableModel modeloTabela;
     private JTable tabelaLancamentos;
 
+    // Painel inferior de análise visual (Categorias + Insights)
+    private JPanel painelBarrasCategorias;
+    private JLabel lblInsightMaiorReceita;
+    private JLabel lblInsightMaiorDespesa;
+    private JLabel lblInsightTicketMedio;
+    private JLabel lblInsightStatusOrcamento;
+
     public FinanceHubSwingFrame(Path arquivoPersistenciaLocal) {
         super("FinanceHub — Gerenciador Financeiro Pessoal (POO Java 21)");
         configurarCoresDialogo();
@@ -159,9 +184,8 @@ public class FinanceHubSwingFrame extends JFrame {
         UIManager.put("OptionPane.background", CARD_CINZA);
         UIManager.put("Panel.background", CARD_CINZA);
         UIManager.put("OptionPane.messageForeground", TEXTO_CLARO);
-        UIManager.put("TabbedPane.selected", CARD_CINZA_CLARO);
-        UIManager.put("TabbedPane.background", BG_PRETO);
-        UIManager.put("TabbedPane.foreground", TEXTO_CLARO);
+        UIManager.put("ComboBox.selectionBackground", CIANO_ESCURO);
+        UIManager.put("ComboBox.selectionForeground", BG_PRETO);
     }
 
     private void carregarDadosIniciais() {
@@ -220,22 +244,22 @@ public class FinanceHubSwingFrame extends JFrame {
 
     private void construirJanela() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1320, 840);
-        setMinimumSize(new Dimension(1120, 740));
+        setSize(1380, 880);
+        setMinimumSize(new Dimension(1180, 760));
         setLocationRelativeTo(null);
 
-        JPanel painelRaiz = new JPanel(new BorderLayout(0, 16));
+        JPanel painelRaiz = new JPanel(new BorderLayout(0, 14));
         painelRaiz.setBackground(BG_PRETO);
-        painelRaiz.setBorder(new EmptyBorder(0, 0, 16, 0));
+        painelRaiz.setBorder(new EmptyBorder(0, 0, 14, 0));
         setContentPane(painelRaiz);
 
         painelRaiz.add(criarBarraTopo(), BorderLayout.NORTH);
 
-        JPanel miolo = new JPanel(new BorderLayout(0, 16));
+        JPanel miolo = new JPanel(new BorderLayout(0, 14));
         miolo.setBackground(BG_PRETO);
-        miolo.setBorder(new EmptyBorder(0, 20, 0, 20));
+        miolo.setBorder(new EmptyBorder(0, 18, 0, 18));
 
-        miolo.add(criarPainelQuatroCards(), BorderLayout.NORTH);
+        miolo.add(criarPainelCincoCards(), BorderLayout.NORTH);
         miolo.add(criarAreaTrabalhoCentral(), BorderLayout.CENTER);
 
         painelRaiz.add(miolo, BorderLayout.CENTER);
@@ -281,18 +305,24 @@ public class FinanceHubSwingFrame extends JFrame {
         JPanel direita = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
         direita.setOpaque(false);
 
-        this.lblCotacaoTopo = new JLabel("  US$ 1 = R$ " + this.cotacaoMoedaService.getUltimaCotacaoDolar() + "  ");
+        this.lblCotacaoTopo = new JLabel(
+            "  USD R$ " + this.cotacaoMoedaService.getUltimaCotacaoDolar() +
+            " | EUR R$ " + this.cotacaoMoedaService.getUltimaCotacaoEuro() + "  "
+        );
         this.lblCotacaoTopo.setOpaque(true);
         this.lblCotacaoTopo.setBackground(CARD_CINZA_CLARO);
         this.lblCotacaoTopo.setForeground(CIANO_VIVO);
         this.lblCotacaoTopo.setFont(new Font("Segoe UI", Font.BOLD, 12));
         this.lblCotacaoTopo.setBorder(BorderFactory.createCompoundBorder(
             new LineBorder(CIANO_ESCURO, 1, true),
-            new EmptyBorder(5, 8, 5, 8)
+            new EmptyBorder(6, 10, 6, 10)
         ));
 
-        JButton btnAtualizarCotacao = criarBotaoSecundario("Atualizar Dólar (API)");
+        JButton btnAtualizarCotacao = criarBotaoSecundario("Atualizar Câmbio (API)");
         btnAtualizarCotacao.addActionListener(e -> acaoConsultarApiCotacao());
+
+        JButton btnMeta = criarBotaoSecundario("Definir Meta Mensal");
+        btnMeta.addActionListener(e -> acaoDefinirMetaMensal());
 
         JButton btnEditarUsuario = criarBotaoSecundario("Perfil do Usuário");
         btnEditarUsuario.addActionListener(e -> acaoEditarUsuario());
@@ -305,6 +335,7 @@ public class FinanceHubSwingFrame extends JFrame {
 
         direita.add(this.lblCotacaoTopo);
         direita.add(btnAtualizarCotacao);
+        direita.add(btnMeta);
         direita.add(btnEditarUsuario);
         direita.add(btnImportar);
         direita.add(btnExportar);
@@ -314,8 +345,8 @@ public class FinanceHubSwingFrame extends JFrame {
         return barra;
     }
 
-    private JPanel criarPainelQuatroCards() {
-        JPanel grid = new JPanel(new GridLayout(1, 4, 14, 0));
+    private JPanel criarPainelCincoCards() {
+        JPanel grid = new JPanel(new GridLayout(1, 5, 12, 0));
         grid.setOpaque(false);
 
         this.lblValorReceitas = new JLabel("R$ 0,00");
@@ -329,12 +360,20 @@ public class FinanceHubSwingFrame extends JFrame {
         grid.add(criarCardDashboard("DESPESAS (-)", this.lblValorDespesas, this.lblQtdDespesas, this.barraDespesas, CORAL_DESPESA));
 
         this.lblValorSaldo = new JLabel("R$ 0,00");
-        this.lblQtdTotal = new JLabel("0 lançamentos");
-        grid.add(criarCardDashboard("SALDO EM REAIS (R$)", this.lblValorSaldo, this.lblQtdTotal, null, CIANO_VIVO));
+        this.lblTaxaPoupanca = new JLabel("Taxa de poupança: 0%");
+        this.barraPoupanca = criarBarraProgresso(CIANO_VIVO);
+        grid.add(criarCardDashboard("SALDO LÍQUIDO (R$)", this.lblValorSaldo, this.lblTaxaPoupanca, this.barraPoupanca, CIANO_VIVO));
+
+        this.lblValorMeta = new JLabel("R$ 3.500,00");
+        this.lblDetalheMeta = new JLabel("0% do limite utilizado");
+        this.barraMetaGastos = criarBarraProgresso(CIANO_VIVO);
+        grid.add(criarCardDashboard("META DE GASTOS MENSAL", this.lblValorMeta, this.lblDetalheMeta, this.barraMetaGastos, AMBAR_ALERTA));
 
         this.lblValorSaldoDolar = new JLabel("US$ 0.00");
-        this.lblDetalheDolar = new JLabel("Conversão via CotacaoMoedaService");
-        grid.add(criarCardDashboard("SALDO EM DÓLAR (API EXTERNA)", this.lblValorSaldoDolar, this.lblDetalheDolar, null, CIANO_VIVO));
+        this.lblDetalheCambio = new JLabel("€ 0.00 (API Externa)");
+        JProgressBar barraCambio = criarBarraProgresso(CIANO_ESCURO);
+        barraCambio.setValue(100);
+        grid.add(criarCardDashboard("SALDO EM USD / EUR (API)", this.lblValorSaldoDolar, this.lblDetalheCambio, barraCambio, CIANO_VIVO));
 
         return grid;
     }
@@ -357,7 +396,7 @@ public class FinanceHubSwingFrame extends JFrame {
         card.setBackground(CARD_CINZA);
         card.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(3, 1, 1, 1, corDestaque),
-            new EmptyBorder(14, 18, 14, 18)
+            new EmptyBorder(12, 16, 12, 16)
         ));
 
         JLabel lblTitulo = new JLabel(titulo);
@@ -367,7 +406,7 @@ public class FinanceHubSwingFrame extends JFrame {
 
         lblValor.setForeground(corDestaque);
         lblValor.setFont(FONTE_VALOR_CARD);
-        lblValor.setBorder(new EmptyBorder(6, 0, 6, 0));
+        lblValor.setBorder(new EmptyBorder(5, 0, 5, 0));
         lblValor.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         lblDetalhe.setForeground(TEXTO_CINZA);
@@ -385,32 +424,88 @@ public class FinanceHubSwingFrame extends JFrame {
     }
 
     private JPanel criarAreaTrabalhoCentral() {
-        JPanel painel = new JPanel(new BorderLayout(18, 0));
+        JPanel painel = new JPanel(new BorderLayout(16, 0));
         painel.setOpaque(false);
 
-        this.abasLateral = new JTabbedPane();
-        this.abasLateral.setPreferredSize(new Dimension(390, 520));
-        this.abasLateral.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        this.abasLateral.setBackground(CARD_CINZA);
-        this.abasLateral.setForeground(TEXTO_CLARO);
-
-        this.abasLateral.addTab("1. Lançamento", criarAbaFormularioLancamento());
-        this.abasLateral.addTab("2. Categorias", criarAbaCategorias());
-        this.abasLateral.addTab("3. Importar CSV", criarAbaImportacaoCsv());
-
-        painel.add(this.abasLateral, BorderLayout.WEST);
-        painel.add(criarPainelTabelaDireita(), BorderLayout.CENTER);
+        painel.add(criarColunaEsquerdaComAbasCustomizadas(), BorderLayout.WEST);
+        painel.add(criarColunaDireitaCompleta(), BorderLayout.CENTER);
         return painel;
+    }
+
+    private JPanel criarColunaEsquerdaComAbasCustomizadas() {
+        JPanel containerEsquerda = new JPanel(new BorderLayout(0, 10));
+        containerEsquerda.setPreferredSize(new Dimension(385, 560));
+        containerEsquerda.setBackground(CARD_CINZA);
+        containerEsquerda.setBorder(new LineBorder(BORDA_CINZA, 1, true));
+
+        // Barra de botões de navegação (substitui JTabbedPane sem bordas brancas)
+        JPanel barraNavegacao = new JPanel(new GridLayout(1, 3, 6, 0));
+        barraNavegacao.setBackground(BG_CAMPO);
+        barraNavegacao.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDA_CINZA),
+            new EmptyBorder(8, 8, 8, 8)
+        ));
+
+        this.btnAbaLancamento = criarBotaoAba("1. Lançamento", true);
+        this.btnAbaCategorias = criarBotaoAba("2. Categorias", false);
+        this.btnAbaImportar = criarBotaoAba("3. Lote CSV", false);
+
+        this.btnAbaLancamento.addActionListener(e -> alternarAbaLateral("ABA_LANCAMENTO", this.btnAbaLancamento));
+        this.btnAbaCategorias.addActionListener(e -> alternarAbaLateral("ABA_CATEGORIAS", this.btnAbaCategorias));
+        this.btnAbaImportar.addActionListener(e -> alternarAbaLateral("ABA_IMPORTAR", this.btnAbaImportar));
+
+        barraNavegacao.add(this.btnAbaLancamento);
+        barraNavegacao.add(this.btnAbaCategorias);
+        barraNavegacao.add(this.btnAbaImportar);
+
+        this.cardLayoutLateral = new CardLayout();
+        this.painelConteudoLateral = new JPanel(this.cardLayoutLateral);
+        this.painelConteudoLateral.setBackground(CARD_CINZA);
+
+        this.painelConteudoLateral.add(criarAbaFormularioLancamento(), "ABA_LANCAMENTO");
+        this.painelConteudoLateral.add(criarAbaCategorias(), "ABA_CATEGORIAS");
+        this.painelConteudoLateral.add(criarAbaImportacaoCsv(), "ABA_IMPORTAR");
+
+        containerEsquerda.add(barraNavegacao, BorderLayout.NORTH);
+        containerEsquerda.add(this.painelConteudoLateral, BorderLayout.CENTER);
+        return containerEsquerda;
+    }
+
+    private JButton criarBotaoAba(String texto, boolean ativo) {
+        JButton btn = new JButton(texto);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        aplicarEstiloBotaoAba(btn, ativo);
+        return btn;
+    }
+
+    private void aplicarEstiloBotaoAba(JButton btn, boolean ativo) {
+        if (ativo) {
+            btn.setBackground(CIANO_VIVO);
+            btn.setForeground(BG_PRETO);
+            btn.setBorder(new EmptyBorder(8, 6, 8, 6));
+        } else {
+            btn.setBackground(CARD_CINZA_CLARO);
+            btn.setForeground(TEXTO_CINZA);
+            btn.setBorder(new LineBorder(BORDA_CINZA, 1));
+        }
+    }
+
+    private void alternarAbaLateral(String nomeCard, JButton botaoAtivo) {
+        this.cardLayoutLateral.show(this.painelConteudoLateral, nomeCard);
+        aplicarEstiloBotaoAba(this.btnAbaLancamento, botaoAtivo == this.btnAbaLancamento);
+        aplicarEstiloBotaoAba(this.btnAbaCategorias, botaoAtivo == this.btnAbaCategorias);
+        aplicarEstiloBotaoAba(this.btnAbaImportar, botaoAtivo == this.btnAbaImportar);
     }
 
     private JPanel criarAbaFormularioLancamento() {
         JPanel card = criarPainelInternoAba();
 
-        this.lblModoFormulario = new JLabel("▌ Cadastrar Novo Lançamento");
+        this.lblModoFormulario = new JLabel("Cadastrar Novo Lançamento");
         this.lblModoFormulario.setForeground(CIANO_VIVO);
         this.lblModoFormulario.setFont(FONTE_SECAO);
-        this.lblModoFormulario.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(this.lblModoFormulario);
+        card.add(criarBlocoTituloComBarraCiano(this.lblModoFormulario));
         card.add(Box.createVerticalStrut(14));
 
         this.cmbTipo = new JComboBox<>(new String[]{"RECEITA", "DESPESA"});
@@ -431,7 +526,7 @@ public class FinanceHubSwingFrame extends JFrame {
                 }
                 lbl.setBackground(isSelected ? CIANO_ESCURO : BG_CAMPO);
                 lbl.setForeground(isSelected ? BG_PRETO : TEXTO_CLARO);
-                lbl.setBorder(new EmptyBorder(5, 8, 5, 8));
+                lbl.setBorder(new EmptyBorder(6, 10, 6, 10));
                 return lbl;
             }
         });
@@ -448,7 +543,7 @@ public class FinanceHubSwingFrame extends JFrame {
         card.add(this.txtValor);
         card.add(Box.createVerticalStrut(12));
 
-        card.add(criarRotulo("DATA (FORMATO AAAA-MM-DD)"));
+        card.add(criarRotulo("DATA (AAAA-MM-DD)"));
         card.add(this.txtData);
         card.add(Box.createVerticalStrut(12));
 
@@ -470,18 +565,24 @@ public class FinanceHubSwingFrame extends JFrame {
         btnCancelarEdicao.addActionListener(e -> limparFormularioLancamento());
         card.add(btnCancelarEdicao);
 
+        card.add(Box.createVerticalStrut(14));
+        JLabel dicaDuploClique = new JLabel("Dica: Dê duplo clique em uma linha da tabela para editar.");
+        dicaDuploClique.setForeground(TEXTO_CINZA);
+        dicaDuploClique.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        dicaDuploClique.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(dicaDuploClique);
+
         return card;
     }
 
     private JPanel criarAbaCategorias() {
         JPanel card = criarPainelInternoAba();
 
-        JLabel titulo = new JLabel("▌ Gerenciar Categorias e Saldos");
+        JLabel titulo = new JLabel("Gerenciar Categorias e Saldos");
         titulo.setForeground(CIANO_VIVO);
         titulo.setFont(FONTE_SECAO);
-        titulo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(titulo);
-        card.add(Box.createVerticalStrut(12));
+        card.add(criarBlocoTituloComBarraCiano(titulo));
+        card.add(Box.createVerticalStrut(14));
 
         card.add(criarRotulo("NOME DA NOVA CATEGORIA"));
         this.txtNovaCategoria = criarCampoTexto("");
@@ -495,7 +596,7 @@ public class FinanceHubSwingFrame extends JFrame {
         card.add(btnAdicionar);
         card.add(Box.createVerticalStrut(16));
 
-        card.add(criarRotulo("CATEGORIAS CADASTRADAS (COM SALDO POLIMÓRFICO)"));
+        card.add(criarRotulo("CATEGORIAS E SALDO INDIVIDUAL (POLIMÓRFICO)"));
         this.lstCategorias = new JList<>(this.modeloListaCategorias);
         this.lstCategorias.setBackground(BG_CAMPO);
         this.lstCategorias.setForeground(TEXTO_CLARO);
@@ -522,12 +623,11 @@ public class FinanceHubSwingFrame extends JFrame {
     private JPanel criarAbaImportacaoCsv() {
         JPanel card = criarPainelInternoAba();
 
-        JLabel titulo = new JLabel("▌ Importar Lote CSV ou TXT");
+        JLabel titulo = new JLabel("Importar Lote CSV ou TXT");
         titulo.setForeground(CIANO_VIVO);
         titulo.setFont(FONTE_SECAO);
-        titulo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(titulo);
-        card.add(Box.createVerticalStrut(10));
+        card.add(criarBlocoTituloComBarraCiano(titulo));
+        card.add(Box.createVerticalStrut(12));
 
         JLabel instrucao = new JLabel("Padrão: TIPO;DESCRICAO;VALOR;DATA;CATEGORIA");
         instrucao.setForeground(TEXTO_CINZA);
@@ -536,7 +636,7 @@ public class FinanceHubSwingFrame extends JFrame {
         card.add(instrucao);
         card.add(Box.createVerticalStrut(8));
 
-        this.txtAreaCsv = new JTextArea(10, 25);
+        this.txtAreaCsv = new JTextArea(11, 25);
         this.txtAreaCsv.setBackground(BG_CAMPO);
         this.txtAreaCsv.setForeground(TEXTO_CLARO);
         this.txtAreaCsv.setCaretColor(CIANO_VIVO);
@@ -561,23 +661,35 @@ public class FinanceHubSwingFrame extends JFrame {
         return card;
     }
 
-    private JPanel criarPainelTabelaDireita() {
-        JPanel painel = new JPanel(new BorderLayout(0, 12));
+    private JPanel criarColunaDireitaCompleta() {
+        JPanel colunaDireita = new JPanel(new BorderLayout(0, 14));
+        colunaDireita.setOpaque(false);
+
+        colunaDireita.add(criarPainelTabelaSuperior(), BorderLayout.CENTER);
+        colunaDireita.add(criarPainelInferiorAnalitico(), BorderLayout.SOUTH);
+        return colunaDireita;
+    }
+
+    private JPanel criarPainelTabelaSuperior() {
+        JPanel painel = new JPanel(new BorderLayout(0, 10));
         painel.setBackground(CARD_CINZA);
         painel.setBorder(BorderFactory.createCompoundBorder(
             new LineBorder(BORDA_CINZA, 1, true),
-            new EmptyBorder(16, 18, 16, 18)
+            new EmptyBorder(14, 18, 14, 18)
         ));
 
-        // Topo com título e filtros
-        JPanel topo = new JPanel(new BorderLayout(8, 10));
+        // Topo com título, atalhos rápidos e filtros
+        JPanel topo = new JPanel(new BorderLayout(8, 8));
         topo.setOpaque(false);
+
+        JPanel linhaTituloEAtalhos = new JPanel(new BorderLayout());
+        linhaTituloEAtalhos.setOpaque(false);
 
         JPanel titulos = new JPanel();
         titulos.setLayout(new BoxLayout(titulos, BoxLayout.Y_AXIS));
         titulos.setOpaque(false);
 
-        JLabel lblHist = new JLabel("▌ Histórico de Movimentações Financeiras");
+        JLabel lblHist = new JLabel("Histórico de Movimentações Financeiras");
         lblHist.setForeground(CIANO_VIVO);
         lblHist.setFont(FONTE_SECAO);
 
@@ -585,19 +697,49 @@ public class FinanceHubSwingFrame extends JFrame {
         this.lblResumoGeral.setForeground(TEXTO_CINZA);
         this.lblResumoGeral.setFont(new Font("Segoe UI", Font.PLAIN, 12));
 
-        titulos.add(lblHist);
+        titulos.add(criarBlocoTituloComBarraCiano(lblHist));
         titulos.add(Box.createVerticalStrut(3));
         titulos.add(this.lblResumoGeral);
 
-        JPanel barraFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        JPanel atalhosRapidos = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        atalhosRapidos.setOpaque(false);
+
+        JButton btnRapidoMesAtual = criarBotaoSecundario("Mês Atual");
+        btnRapidoMesAtual.addActionListener(e -> {
+            LocalDate hoje = LocalDate.now();
+            this.txtFiltroInicio.setText(hoje.withDayOfMonth(1).toString());
+            this.txtFiltroFim.setText(hoje.withDayOfMonth(hoje.lengthOfMonth()).toString());
+            acaoAplicarFiltros();
+        });
+
+        JButton btnRapidoReceitas = criarBotaoSecundario("Só Receitas");
+        btnRapidoReceitas.addActionListener(e -> {
+            this.cmbFiltroTipo.setSelectedItem("RECEITA");
+            acaoAplicarFiltros();
+        });
+
+        JButton btnRapidoDespesas = criarBotaoSecundario("Só Despesas");
+        btnRapidoDespesas.addActionListener(e -> {
+            this.cmbFiltroTipo.setSelectedItem("DESPESA");
+            acaoAplicarFiltros();
+        });
+
+        atalhosRapidos.add(btnRapidoMesAtual);
+        atalhosRapidos.add(btnRapidoReceitas);
+        atalhosRapidos.add(btnRapidoDespesas);
+
+        linhaTituloEAtalhos.add(titulos, BorderLayout.WEST);
+        linhaTituloEAtalhos.add(atalhosRapidos, BorderLayout.EAST);
+
+        JPanel barraFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         barraFiltros.setOpaque(false);
 
         this.txtBuscaDescricao = criarCampoTexto("");
-        this.txtBuscaDescricao.setPreferredSize(new Dimension(140, 32));
+        this.txtBuscaDescricao.setPreferredSize(new Dimension(150, 32));
 
         this.cmbFiltroTipo = new JComboBox<>(new String[]{"TODOS", "RECEITA", "DESPESA"});
         estilizarCombo(this.cmbFiltroTipo);
-        this.cmbFiltroTipo.setPreferredSize(new Dimension(110, 32));
+        this.cmbFiltroTipo.setPreferredSize(new Dimension(115, 32));
 
         this.txtFiltroInicio = criarCampoTexto("");
         this.txtFiltroInicio.setPreferredSize(new Dimension(100, 32));
@@ -608,7 +750,7 @@ public class FinanceHubSwingFrame extends JFrame {
         JButton btnAplicarFiltro = criarBotaoCiano("Filtrar");
         btnAplicarFiltro.addActionListener(e -> acaoAplicarFiltros());
 
-        JButton btnLimparFiltro = criarBotaoSecundario("Limpar");
+        JButton btnLimparFiltro = criarBotaoSecundario("Limpar Tudo");
         btnLimparFiltro.addActionListener(e -> {
             this.txtBuscaDescricao.setText("");
             this.cmbFiltroTipo.setSelectedIndex(0);
@@ -628,7 +770,7 @@ public class FinanceHubSwingFrame extends JFrame {
         barraFiltros.add(btnAplicarFiltro);
         barraFiltros.add(btnLimparFiltro);
 
-        topo.add(titulos, BorderLayout.NORTH);
+        topo.add(linhaTituloEAtalhos, BorderLayout.NORTH);
         topo.add(barraFiltros, BorderLayout.SOUTH);
 
         // Tabela de lançamentos
@@ -644,16 +786,26 @@ public class FinanceHubSwingFrame extends JFrame {
         this.tabelaLancamentos.setBackground(BG_CAMPO);
         this.tabelaLancamentos.setForeground(TEXTO_CLARO);
         this.tabelaLancamentos.setGridColor(BORDA_CINZA);
-        this.tabelaLancamentos.setRowHeight(34);
+        this.tabelaLancamentos.setRowHeight(32);
         this.tabelaLancamentos.setFont(FONTE_TEXTO);
         this.tabelaLancamentos.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         this.tabelaLancamentos.setFillsViewportHeight(true);
+
+        // Duplo clique carrega para edição
+        this.tabelaLancamentos.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && tabelaLancamentos.getSelectedRow() >= 0) {
+                    acaoCarregarLancamentoParaEdicao();
+                }
+            }
+        });
 
         JTableHeader header = this.tabelaLancamentos.getTableHeader();
         header.setBackground(CARD_CINZA_CLARO);
         header.setForeground(CIANO_VIVO);
         header.setFont(FONTE_ROTULO);
-        header.setPreferredSize(new Dimension(100, 36));
+        header.setPreferredSize(new Dimension(100, 34));
 
         this.tabelaLancamentos.getColumnModel().getColumn(0).setPreferredWidth(45);
         this.tabelaLancamentos.getColumnModel().getColumn(1).setPreferredWidth(95);
@@ -694,16 +846,20 @@ public class FinanceHubSwingFrame extends JFrame {
         scrollTabela.getViewport().setBackground(BG_CAMPO);
         scrollTabela.setBorder(new LineBorder(BORDA_CINZA, 1));
 
-        // Rodapé com botões de Edição e Exclusão
-        JPanel rodape = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        // Rodapé com botões de Duplicar, Editar e Excluir
+        JPanel rodape = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         rodape.setOpaque(false);
 
-        JButton btnEditar = criarBotaoSecundario("Editar Lançamento Selecionado");
+        JButton btnDuplicar = criarBotaoSecundario("Duplicar Selecionado");
+        btnDuplicar.addActionListener(e -> acaoDuplicarLancamentoSelecionado());
+
+        JButton btnEditar = criarBotaoSecundario("Editar Selecionado");
         btnEditar.addActionListener(e -> acaoCarregarLancamentoParaEdicao());
 
-        JButton btnExcluir = criarBotaoPerigo("Excluir Lançamento Selecionado");
+        JButton btnExcluir = criarBotaoPerigo("Excluir Selecionado");
         btnExcluir.addActionListener(e -> acaoExcluirLancamentoSelecionado());
 
+        rodape.add(btnDuplicar);
         rodape.add(btnEditar);
         rodape.add(btnExcluir);
 
@@ -711,6 +867,88 @@ public class FinanceHubSwingFrame extends JFrame {
         painel.add(scrollTabela, BorderLayout.CENTER);
         painel.add(rodape, BorderLayout.SOUTH);
         return painel;
+    }
+
+    private JPanel criarPainelInferiorAnalitico() {
+        JPanel painelAnalitico = new JPanel(new GridLayout(1, 2, 14, 0));
+        painelAnalitico.setOpaque(false);
+        painelAnalitico.setPreferredSize(new Dimension(100, 195));
+
+        // Card Esquerdo: Gráfico de Barras por Categoria
+        JPanel cardGraficoCat = new JPanel(new BorderLayout(0, 8));
+        cardGraficoCat.setBackground(CARD_CINZA);
+        cardGraficoCat.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(12, 16, 12, 16)
+        ));
+
+        JLabel lblTitCat = new JLabel("Distribuição e Saldo por Categoria (Polimorfismo)");
+        lblTitCat.setForeground(CIANO_VIVO);
+        lblTitCat.setFont(FONTE_SECAO);
+        cardGraficoCat.add(criarBlocoTituloComBarraCiano(lblTitCat), BorderLayout.NORTH);
+
+        this.painelBarrasCategorias = new JPanel();
+        this.painelBarrasCategorias.setLayout(new BoxLayout(this.painelBarrasCategorias, BoxLayout.Y_AXIS));
+        this.painelBarrasCategorias.setBackground(CARD_CINZA);
+
+        JScrollPane scrollBarras = new JScrollPane(this.painelBarrasCategorias);
+        scrollBarras.setBorder(null);
+        scrollBarras.getViewport().setBackground(CARD_CINZA);
+        cardGraficoCat.add(scrollBarras, BorderLayout.CENTER);
+
+        // Card Direito: Indicadores e Insights Automáticos
+        JPanel cardInsights = new JPanel(new BorderLayout(0, 8));
+        cardInsights.setBackground(CARD_CINZA);
+        cardInsights.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(12, 16, 12, 16)
+        ));
+
+        JLabel lblTitInsights = new JLabel("Indicadores e Diagnóstico do Período");
+        lblTitInsights.setForeground(CIANO_VIVO);
+        lblTitInsights.setFont(FONTE_SECAO);
+        cardInsights.add(criarBlocoTituloComBarraCiano(lblTitInsights), BorderLayout.NORTH);
+
+        JPanel gradeInsights = new JPanel(new GridLayout(2, 2, 10, 8));
+        gradeInsights.setOpaque(false);
+
+        this.lblInsightMaiorReceita = new JLabel("-");
+        this.lblInsightMaiorDespesa = new JLabel("-");
+        this.lblInsightTicketMedio = new JLabel("-");
+        this.lblInsightStatusOrcamento = new JLabel("-");
+
+        gradeInsights.add(criarMiniCardInsight("MAIOR RECEITA", this.lblInsightMaiorReceita, VERDE_RECEITA));
+        gradeInsights.add(criarMiniCardInsight("MAIOR DESPESA", this.lblInsightMaiorDespesa, CORAL_DESPESA));
+        gradeInsights.add(criarMiniCardInsight("TICKET MÉDIO POR ITEM", this.lblInsightTicketMedio, CIANO_VIVO));
+        gradeInsights.add(criarMiniCardInsight("DIAGNÓSTICO DO ORÇAMENTO", this.lblInsightStatusOrcamento, CIANO_VIVO));
+
+        cardInsights.add(gradeInsights, BorderLayout.CENTER);
+
+        painelAnalitico.add(cardGraficoCat);
+        painelAnalitico.add(cardInsights);
+        return painelAnalitico;
+    }
+
+    private JPanel criarMiniCardInsight(String rotulo, JLabel lblValor, Color corValor) {
+        JPanel box = new JPanel();
+        box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
+        box.setBackground(BG_CAMPO);
+        box.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(8, 12, 8, 12)
+        ));
+
+        JLabel lblTit = new JLabel(rotulo);
+        lblTit.setForeground(TEXTO_CINZA);
+        lblTit.setFont(new Font("Segoe UI", Font.BOLD, 10));
+
+        lblValor.setForeground(corValor);
+        lblValor.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblValor.setBorder(new EmptyBorder(4, 0, 0, 0));
+
+        box.add(lblTit);
+        box.add(lblValor);
+        return box;
     }
 
     // ==================== AÇÕES DOS BOTÕES ====================
@@ -761,7 +999,7 @@ public class FinanceHubSwingFrame extends JFrame {
             Lancamento l = this.gerenciadorLancamentos.buscarPorId(id);
 
             this.idEmEdicao = l.getId();
-            this.lblModoFormulario.setText("▌ Editando Lançamento #" + l.getId());
+            this.lblModoFormulario.setText("Editando Lançamento #" + l.getId());
             this.cmbTipo.setSelectedItem(l.getTipo());
             this.txtDescricao.setText(l.getDescricao());
             this.txtValor.setText(l.getValor().toPlainString());
@@ -769,15 +1007,37 @@ public class FinanceHubSwingFrame extends JFrame {
             if (l.getCategoria() != null) {
                 this.cmbCategoria.setSelectedItem(l.getCategoria());
             }
-            this.abasLateral.setSelectedIndex(0);
+            alternarAbaLateral("ABA_LANCAMENTO", this.btnAbaLancamento);
         } catch (FinanceHubException e) {
             mostrarErro("Erro ao Carregar", e.getMessage());
         }
     }
 
+    private void acaoDuplicarLancamentoSelecionado() {
+        int linha = this.tabelaLancamentos.getSelectedRow();
+        if (linha < 0) {
+            mostrarErro("Seleção Necessária", "Selecione um lançamento na tabela para duplicar.");
+            return;
+        }
+        try {
+            long id = Long.parseLong(String.valueOf(this.modeloTabela.getValueAt(linha, 0)));
+            Lancamento original = this.gerenciadorLancamentos.buscarPorId(id);
+
+            Lancamento copia = original.isReceita()
+                ? new Receita(null, original.getDescricao() + " (Cópia)", original.getValor(), LocalDate.now(), original.getCategoria(), this.usuarioAtual.getId())
+                : new Despesa(null, original.getDescricao() + " (Cópia)", original.getValor(), LocalDate.now(), original.getCategoria(), this.usuarioAtual.getId());
+
+            registrarNovoLancamentoInterno(copia);
+            salvarAlteracoes();
+            atualizarInterface(null, null);
+        } catch (FinanceHubException e) {
+            mostrarErro("Erro ao Duplicar", e.getMessage());
+        }
+    }
+
     private void limparFormularioLancamento() {
         this.idEmEdicao = null;
-        this.lblModoFormulario.setText("▌ Cadastrar Novo Lançamento");
+        this.lblModoFormulario.setText("Cadastrar Novo Lançamento");
         this.txtDescricao.setText("");
         this.txtValor.setText("");
         this.txtData.setText(LocalDate.now().toString());
@@ -884,10 +1144,28 @@ public class FinanceHubSwingFrame extends JFrame {
     }
 
     private void acaoConsultarApiCotacao() {
-        BigDecimal cotacao = this.cotacaoMoedaService.buscarCotacaoDolarAtual();
-        String status = this.cotacaoMoedaService.isObtidaDaApiOnline() ? "Online - AwesomeAPI" : "Valor Padrão Local";
-        this.lblCotacaoTopo.setText("  US$ 1 = R$ " + cotacao + " (" + status + ")  ");
+        BigDecimal usd = this.cotacaoMoedaService.buscarCotacaoDolarAtual();
+        BigDecimal eur = this.cotacaoMoedaService.getUltimaCotacaoEuro();
+        String status = this.cotacaoMoedaService.isObtidaDaApiOnline() ? "AwesomeAPI Online" : "Padrão Local";
+        this.lblCotacaoTopo.setText("  USD R$ " + usd + " | EUR R$ " + eur + " (" + status + ")  ");
         atualizarInterface(null, null);
+    }
+
+    private void acaoDefinirMetaMensal() {
+        String entrada = JOptionPane.showInputDialog(
+            this,
+            "Informe o limite máximo de despesas mensais (R$):",
+            this.usuarioAtual.getMetaDespesaMensal().toPlainString()
+        );
+        if (entrada != null && !entrada.isBlank()) {
+            try {
+                BigDecimal novaMeta = new BigDecimal(entrada.trim().replace(",", ".")).setScale(2, RoundingMode.HALF_UP);
+                this.usuarioAtual.setMetaDespesaMensal(novaMeta);
+                atualizarInterface(null, null);
+            } catch (Exception e) {
+                mostrarErro("Meta Inválida", "Informe um valor numérico positivo.");
+            }
+        }
     }
 
     private void acaoEditarUsuario() {
@@ -914,7 +1192,7 @@ public class FinanceHubSwingFrame extends JFrame {
         }
     }
 
-    // ==================== ATUALIZAÇÃO DA TELA ====================
+    // ==================== ATUALIZAÇÃO DA TELA E ANÁLISES ====================
 
     private void atualizarInterface(LocalDate inicio, LocalDate fim) {
         try {
@@ -934,7 +1212,7 @@ public class FinanceHubSwingFrame extends JFrame {
                 this.cmbCategoria.setSelectedItem(selecionadaCombo);
             }
 
-            // 2. Obter lançamentos por período e aplicar filtro de busca/tipo
+            // 2. Filtrar lançamentos
             List<Lancamento> base = (inicio != null && fim != null)
                 ? this.gerenciadorLancamentos.listarPorPeriodo(inicio, fim)
                 : this.gerenciadorLancamentos.listar();
@@ -953,21 +1231,42 @@ public class FinanceHubSwingFrame extends JFrame {
 
             Relatorio relatorio = GerenciadorLancamentos.calcularRelatorio(filtrados);
 
-            // 3. Atualizar os 4 cards superiores
+            // 3. Atualizar os 5 Cards Superiores
             this.lblValorReceitas.setText(this.moedaBRL.format(relatorio.getTotalReceitas()));
-            this.lblQtdReceitas.setText(relatorio.getQuantidadeReceitas() + " entrada(s)");
+            this.lblQtdReceitas.setText(relatorio.getQuantidadeReceitas() + " entrada(s) no período");
 
             this.lblValorDespesas.setText(this.moedaBRL.format(relatorio.getTotalDespesas()));
-            this.lblQtdDespesas.setText(relatorio.getQuantidadeDespesas() + " saída(s)");
+            this.lblQtdDespesas.setText(relatorio.getQuantidadeDespesas() + " saída(s) no período");
 
             this.lblValorSaldo.setText(this.moedaBRL.format(relatorio.getSaldoTotal()));
-            this.lblQtdTotal.setText(relatorio.getQuantidadeLancamentos() + " lançamento(s) exibido(s)");
 
-            BigDecimal saldoEmDolar = this.cotacaoMoedaService.converterReaisParaDolar(relatorio.getSaldoTotal());
-            this.lblValorSaldoDolar.setText(this.moedaUSD.format(saldoEmDolar));
-            this.lblDetalheDolar.setText("Cotação US$ 1 = R$ " + this.cotacaoMoedaService.getUltimaCotacaoDolar());
+            int taxaPoupanca = 0;
+            if (relatorio.getTotalReceitas().compareTo(BigDecimal.ZERO) > 0 && relatorio.getSaldoTotal().compareTo(BigDecimal.ZERO) > 0) {
+                taxaPoupanca = relatorio.getSaldoTotal()
+                    .multiply(new BigDecimal("100"))
+                    .divide(relatorio.getTotalReceitas(), 0, RoundingMode.HALF_UP)
+                    .intValue();
+            }
+            this.lblTaxaPoupanca.setText("Taxa de poupança: " + Math.min(100, Math.max(0, taxaPoupanca)) + "% das receitas");
+            this.barraPoupanca.setValue(Math.min(100, Math.max(0, taxaPoupanca)));
 
-            // Atualizar barras de proporção
+            // Card Meta Mensal
+            BigDecimal meta = this.usuarioAtual.getMetaDespesaMensal();
+            this.lblValorMeta.setText(this.moedaBRL.format(meta));
+            int percMeta = meta.compareTo(BigDecimal.ZERO) > 0
+                ? relatorio.getTotalDespesas().multiply(new BigDecimal("100")).divide(meta, 0, RoundingMode.HALF_UP).intValue()
+                : 0;
+            this.lblDetalheMeta.setText(percMeta + "% do limite utilizado");
+            this.barraMetaGastos.setValue(Math.min(100, percMeta));
+            this.barraMetaGastos.setForeground(percMeta > 100 ? CORAL_DESPESA : (percMeta >= 80 ? AMBAR_ALERTA : VERDE_RECEITA));
+
+            // Card Câmbio Internacional
+            BigDecimal saldoUSD = this.cotacaoMoedaService.converterReaisParaDolar(relatorio.getSaldoTotal());
+            BigDecimal saldoEUR = this.cotacaoMoedaService.converterReaisParaEuro(relatorio.getSaldoTotal());
+            this.lblValorSaldoDolar.setText(this.moedaUSD.format(saldoUSD));
+            this.lblDetalheCambio.setText(String.format("Euro: € %.2f (API Externa)", saldoEUR));
+
+            // Barras de proporção Receitas x Despesas
             BigDecimal somaMovimentado = relatorio.getTotalReceitas().add(relatorio.getTotalDespesas());
             if (somaMovimentado.compareTo(BigDecimal.ZERO) > 0) {
                 int percRec = relatorio.getTotalReceitas().multiply(new BigDecimal("100")).divide(somaMovimentado, 0, RoundingMode.HALF_UP).intValue();
@@ -993,8 +1292,99 @@ public class FinanceHubSwingFrame extends JFrame {
                     this.moedaBRL.format(l.calcularImpacto())
                 });
             }
+
+            // 5. Atualizar Painel Analítico Inferior (Gráfico de Categorias e Insights)
+            atualizarPainelAnaliticoInferior(filtrados, relatorio);
         } catch (FinanceHubException e) {
             mostrarErro("Erro no Filtro", e.getMessage());
+        }
+    }
+
+    private void atualizarPainelAnaliticoInferior(List<Lancamento> filtrados, Relatorio relatorio) {
+        // Atualizar barras por categoria
+        this.painelBarrasCategorias.removeAll();
+        BigDecimal maiorModuloCategoria = BigDecimal.ONE;
+        for (Categoria c : this.gerenciadorCategorias.listar()) {
+            BigDecimal mod = c.calcularSaldo().abs();
+            if (mod.compareTo(maiorModuloCategoria) > 0) {
+                maiorModuloCategoria = mod;
+            }
+        }
+
+        for (Categoria c : this.gerenciadorCategorias.listar()) {
+            BigDecimal saldoCat = c.calcularSaldo();
+            int perc = saldoCat.abs().multiply(new BigDecimal("100")).divide(maiorModuloCategoria, 0, RoundingMode.HALF_UP).intValue();
+
+            JPanel linhaCat = new JPanel(new BorderLayout(10, 0));
+            linhaCat.setOpaque(false);
+            linhaCat.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+            linhaCat.setBorder(new EmptyBorder(2, 0, 4, 4));
+
+            JLabel lblNome = new JLabel(c.getNome() + " (" + c.getLancamentos().size() + ")");
+            lblNome.setPreferredSize(new Dimension(130, 20));
+            lblNome.setForeground(TEXTO_CLARO);
+            lblNome.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+            JProgressBar barraCat = new JProgressBar(0, 100);
+            barraCat.setValue(perc);
+            barraCat.setBackground(BG_CAMPO);
+            barraCat.setForeground(saldoCat.compareTo(BigDecimal.ZERO) >= 0 ? VERDE_RECEITA : CORAL_DESPESA);
+            barraCat.setBorderPainted(false);
+
+            JLabel lblSaldoCat = new JLabel(this.moedaBRL.format(saldoCat), SwingConstants.RIGHT);
+            lblSaldoCat.setPreferredSize(new Dimension(110, 20));
+            lblSaldoCat.setForeground(saldoCat.compareTo(BigDecimal.ZERO) >= 0 ? VERDE_RECEITA : CORAL_DESPESA);
+            lblSaldoCat.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+            linhaCat.add(lblNome, BorderLayout.WEST);
+            linhaCat.add(barraCat, BorderLayout.CENTER);
+            linhaCat.add(lblSaldoCat, BorderLayout.EAST);
+            this.painelBarrasCategorias.add(linhaCat);
+        }
+        this.painelBarrasCategorias.revalidate();
+        this.painelBarrasCategorias.repaint();
+
+        // Calcular Insights
+        Lancamento maiorRec = null;
+        Lancamento maiorDesp = null;
+        BigDecimal somaValores = BigDecimal.ZERO;
+
+        for (Lancamento l : filtrados) {
+            somaValores = somaValores.add(l.getValor());
+            if (l.isReceita()) {
+                if (maiorRec == null || l.getValor().compareTo(maiorRec.getValor()) > 0) {
+                    maiorRec = l;
+                }
+            } else {
+                if (maiorDesp == null || l.getValor().compareTo(maiorDesp.getValor()) > 0) {
+                    maiorDesp = l;
+                }
+            }
+        }
+
+        this.lblInsightMaiorReceita.setText(
+            maiorRec != null ? maiorRec.getDescricao() + " (" + this.moedaBRL.format(maiorRec.getValor()) + ")" : "Nenhuma receita"
+        );
+        this.lblInsightMaiorDespesa.setText(
+            maiorDesp != null ? maiorDesp.getDescricao() + " (" + this.moedaBRL.format(maiorDesp.getValor()) + ")" : "Nenhuma despesa"
+        );
+
+        if (!filtrados.isEmpty()) {
+            BigDecimal media = somaValores.divide(BigDecimal.valueOf(filtrados.size()), 2, RoundingMode.HALF_UP);
+            this.lblInsightTicketMedio.setText(this.moedaBRL.format(media) + " por lançamento");
+        } else {
+            this.lblInsightTicketMedio.setText("R$ 0,00");
+        }
+
+        if (relatorio.getSaldoTotal().compareTo(BigDecimal.ZERO) < 0) {
+            this.lblInsightStatusOrcamento.setText("Déficit — Despesas superam receitas");
+            this.lblInsightStatusOrcamento.setForeground(CORAL_DESPESA);
+        } else if (relatorio.getTotalDespesas().compareTo(this.usuarioAtual.getMetaDespesaMensal()) > 0) {
+            this.lblInsightStatusOrcamento.setText("Alerta — Limite mensal ultrapassado");
+            this.lblInsightStatusOrcamento.setForeground(AMBAR_ALERTA);
+        } else {
+            this.lblInsightStatusOrcamento.setText("Orçamento Saudável — Dentro da meta");
+            this.lblInsightStatusOrcamento.setForeground(VERDE_RECEITA);
         }
     }
 
@@ -1026,11 +1416,26 @@ public class FinanceHubSwingFrame extends JFrame {
 
     // ==================== COMPONENTES AUXILIARES DE ESTILO ====================
 
+    private JPanel criarBlocoTituloComBarraCiano(JLabel labelTitulo) {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        p.setOpaque(false);
+        p.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel barraVertical = new JPanel();
+        barraVertical.setBackground(CIANO_VIVO);
+        barraVertical.setPreferredSize(new Dimension(4, 18));
+
+        labelTitulo.setBorder(new EmptyBorder(0, 8, 0, 0));
+        p.add(barraVertical);
+        p.add(labelTitulo);
+        return p;
+    }
+
     private JPanel criarPainelInternoAba() {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setBackground(CARD_CINZA);
-        p.setBorder(new EmptyBorder(16, 16, 16, 16));
+        p.setBorder(new EmptyBorder(14, 16, 14, 16));
         return p;
     }
 
@@ -1069,6 +1474,7 @@ public class FinanceHubSwingFrame extends JFrame {
         combo.setBackground(BG_CAMPO);
         combo.setForeground(TEXTO_CLARO);
         combo.setFont(FONTE_TEXTO);
+        combo.setFocusable(false);
         combo.setAlignmentX(Component.LEFT_ALIGNMENT);
         combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         combo.setBorder(new LineBorder(BORDA_CINZA, 1));

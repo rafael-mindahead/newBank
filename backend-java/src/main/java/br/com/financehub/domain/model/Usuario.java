@@ -7,13 +7,26 @@ public class Usuario {
     private long id;
     private String nome;
     private String email;
+    private BigDecimal metaDespesaMensal;
     private ArrayList<Lancamento> lancementos;
 
     public Usuario(long id, String nome, String email) {
         this.id = id;
         this.nome = nome;
         this.email = email;
+        this.metaDespesaMensal = new BigDecimal("3500.00");
         this.lancementos = new ArrayList<>();
+    }
+
+    public BigDecimal getMetaDespesaMensal() {
+        return this.metaDespesaMensal;
+    }
+
+    public void setMetaDespesaMensal(BigDecimal metaDespesaMensal) {
+        if (metaDespesaMensal == null || metaDespesaMensal.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("A meta mensal deve ser maior que zero");
+        }
+        this.metaDespesaMensal = metaDespesaMensal;
     }
 
     public long getId() {

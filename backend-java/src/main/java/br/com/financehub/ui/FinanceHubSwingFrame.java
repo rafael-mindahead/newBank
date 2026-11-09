@@ -63,32 +63,41 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Interface gráfica completa do FinanceHub em Java Swing.
- * Tema escuro financeiro: Preto, Cinza Escuro e Ciano.
+ * Aplicativo desktop FinanceHub estruturado em múltiplas telas independentes
+ * (Início, Adicionar Lançamento, Consultar Período, Categorias, Arquivos & API)
+ * navegadas por um menu lateral fixo.
  */
 public class FinanceHubSwingFrame extends JFrame {
 
-    // Paleta de cores (Preto, Cinza e Ciano)
+    // Identificadores das telas do aplicativo
+    private static final String TELA_INICIO = "TELA_INICIO";
+    private static final String TELA_ADICIONAR = "TELA_ADICIONAR";
+    private static final String TELA_PERIODO = "TELA_PERIODO";
+    private static final String TELA_CATEGORIAS = "TELA_CATEGORIAS";
+    private static final String TELA_ARQUIVOS_API = "TELA_ARQUIVOS_API";
+
+    // Paleta de cores: Preto, Cinza Escuro e Ciano
     private static final Color BG_PRETO = new Color(8, 11, 16);
-    private static final Color BG_CAMPO = new Color(13, 18, 26);
-    private static final Color CARD_CINZA = new Color(17, 23, 33);
-    private static final Color CARD_CINZA_CLARO = new Color(25, 34, 48);
-    private static final Color BORDA_CINZA = new Color(40, 52, 70);
+    private static final Color BG_SIDEBAR = new Color(12, 16, 23);
+    private static final Color BG_CAMPO = new Color(14, 19, 28);
+    private static final Color CARD_CINZA = new Color(18, 24, 34);
+    private static final Color CARD_CINZA_CLARO = new Color(26, 35, 49);
+    private static final Color BORDA_CINZA = new Color(42, 54, 72);
     private static final Color TEXTO_CLARO = new Color(238, 244, 250);
-    private static final Color TEXTO_CINZA = new Color(142, 158, 180);
+    private static final Color TEXTO_CINZA = new Color(144, 160, 182);
     private static final Color CIANO_VIVO = new Color(34, 211, 238);
     private static final Color CIANO_ESCURO = new Color(6, 182, 212);
     private static final Color VERDE_RECEITA = new Color(45, 212, 191);
     private static final Color CORAL_DESPESA = new Color(248, 113, 113);
     private static final Color AMBAR_ALERTA = new Color(251, 191, 36);
 
-    private static final Font FONTE_TITULO = new Font("Segoe UI", Font.BOLD, 19);
-    private static final Font FONTE_SECAO = new Font("Segoe UI", Font.BOLD, 14);
-    private static final Font FONTE_VALOR_CARD = new Font("Segoe UI", Font.BOLD, 21);
+    private static final Font FONTE_TITULO_PAGINA = new Font("Segoe UI", Font.BOLD, 22);
+    private static final Font FONTE_SECAO = new Font("Segoe UI", Font.BOLD, 15);
+    private static final Font FONTE_VALOR_CARD = new Font("Segoe UI", Font.BOLD, 22);
     private static final Font FONTE_ROTULO = new Font("Segoe UI", Font.BOLD, 11);
     private static final Font FONTE_TEXTO = new Font("Segoe UI", Font.PLAIN, 13);
 
-    // Domínio, serviços e contrato de persistência
+    // Objetos de domínio, serviços e contrato de persistência
     private final Usuario usuarioAtual;
     private final GerenciadorCategorias gerenciadorCategorias;
     private final GerenciadorLancamentos gerenciadorLancamentos;
@@ -99,41 +108,47 @@ public class FinanceHubSwingFrame extends JFrame {
     private final NumberFormat moedaBRL = NumberFormat.getCurrencyInstance(Locale.of("pt", "BR"));
     private final NumberFormat moedaUSD = NumberFormat.getCurrencyInstance(Locale.US);
 
-    // Componentes do topo e 5 cards de resumo
-    private JLabel lblUsuarioTopo;
-    private JLabel lblCotacaoTopo;
+    // Navegação principal por telas (CardLayout)
+    private CardLayout gerenciadorTelas;
+    private JPanel painelTelas;
+    private JButton btnMenuInicio;
+    private JButton btnMenuAdicionar;
+    private JButton btnMenuPeriodo;
+    private JButton btnMenuCategorias;
+    private JButton btnMenuArquivos;
+    private JLabel lblUsuarioSidebar;
+    private JLabel lblEmailSidebar;
 
-    private JLabel lblValorReceitas;
-    private JLabel lblQtdReceitas;
+    // ==================== COMPONENTES DA TELA 1: INÍCIO ====================
+    private JLabel lblCardReceitas;
+    private JLabel lblSubReceitas;
     private JProgressBar barraReceitas;
 
-    private JLabel lblValorDespesas;
-    private JLabel lblQtdDespesas;
+    private JLabel lblCardDespesas;
+    private JLabel lblSubDespesas;
     private JProgressBar barraDespesas;
 
-    private JLabel lblValorSaldo;
-    private JLabel lblTaxaPoupanca;
+    private JLabel lblCardSaldo;
+    private JLabel lblSubPoupanca;
     private JProgressBar barraPoupanca;
 
-    private JLabel lblValorMeta;
-    private JLabel lblDetalheMeta;
-    private JProgressBar barraMetaGastos;
+    private JLabel lblCardMeta;
+    private JLabel lblSubMeta;
+    private JProgressBar barraMeta;
 
-    private JLabel lblValorSaldoDolar;
-    private JLabel lblDetalheCambio;
+    private JLabel lblCardCambio;
+    private JLabel lblSubCambio;
 
-    private JLabel lblResumoGeral;
+    private JPanel painelBarrasCategoriasInicio;
+    private JLabel lblInsightMaiorReceita;
+    private JLabel lblInsightMaiorDespesa;
+    private JLabel lblInsightTicketMedio;
+    private JLabel lblInsightStatusOrcamento;
+    private DefaultTableModel modeloTabelaRecentes;
 
-    // Navegação lateral customizada (sem bordas brancas do JTabbedPane)
-    private CardLayout cardLayoutLateral;
-    private JPanel painelConteudoLateral;
-    private JButton btnAbaLancamento;
-    private JButton btnAbaCategorias;
-    private JButton btnAbaImportar;
-
-    // Formulário de lançamento
+    // ==================== COMPONENTES DA TELA 2: ADICIONAR / EDITAR ====================
     private Long idEmEdicao = null;
-    private JLabel lblModoFormulario;
+    private JLabel lblTituloFormulario;
     private JComboBox<String> cmbTipo;
     private JTextField txtDescricao;
     private JTextField txtValor;
@@ -141,31 +156,30 @@ public class FinanceHubSwingFrame extends JFrame {
     private final DefaultComboBoxModel<Categoria> modeloComboCategorias = new DefaultComboBoxModel<>();
     private JComboBox<Categoria> cmbCategoria;
 
-    // Aba de categorias
-    private JTextField txtNovaCategoria;
-    private final DefaultListModel<String> modeloListaCategorias = new DefaultListModel<>();
-    private JList<String> lstCategorias;
-
-    // Aba de importação CSV/TXT
-    private JTextArea txtAreaCsv;
-
-    // Filtros e tabela
+    // ==================== COMPONENTES DA TELA 3: EXTRATO E PERÍODO ====================
     private JTextField txtBuscaDescricao;
     private JComboBox<String> cmbFiltroTipo;
     private JTextField txtFiltroInicio;
     private JTextField txtFiltroFim;
-    private DefaultTableModel modeloTabela;
-    private JTable tabelaLancamentos;
+    private JLabel lblPeriodoReceitas;
+    private JLabel lblPeriodoDespesas;
+    private JLabel lblPeriodoSaldo;
+    private JLabel lblResumoPeriodoTexto;
+    private DefaultTableModel modeloTabelaPeriodo;
+    private JTable tabelaPeriodo;
 
-    // Painel inferior de análise visual (Categorias + Insights)
-    private JPanel painelBarrasCategorias;
-    private JLabel lblInsightMaiorReceita;
-    private JLabel lblInsightMaiorDespesa;
-    private JLabel lblInsightTicketMedio;
-    private JLabel lblInsightStatusOrcamento;
+    // ==================== COMPONENTES DA TELA 4: CATEGORIAS ====================
+    private JTextField txtNovaCategoria;
+    private DefaultTableModel modeloTabelaCategorias;
+    private JTable tabelaCategorias;
+    private final DefaultListModel<String> modeloListaCategoriasSimples = new DefaultListModel<>();
+
+    // ==================== COMPONENTES DA TELA 5: ARQUIVOS CSV & API ====================
+    private JTextArea txtAreaCsv;
+    private JLabel lblStatusApiDetalhe;
 
     public FinanceHubSwingFrame(Path arquivoPersistenciaLocal) {
-        super("FinanceHub — Gerenciador Financeiro Pessoal (POO Java 21)");
+        super("FinanceHub — Gerenciador Financeiro Pessoal");
         configurarCoresDialogo();
 
         this.usuarioAtual = new Usuario(1L, "Rafael", "rafael@financehub.com");
@@ -173,11 +187,16 @@ public class FinanceHubSwingFrame extends JFrame {
         this.gerenciadorLancamentos = new GerenciadorLancamentos();
         this.importadorArquivoService = new ImportadorArquivoService();
         this.cotacaoMoedaService = new CotacaoMoedaService();
-        this.repositorioDados = new JdbcRepositorioDados(arquivoPersistenciaLocal);
+        this.repositorioDados = new JdbcRepositorioDados(arquivoLocalOuPadrao(arquivoPersistenciaLocal));
 
         carregarDadosIniciais();
-        construirJanela();
-        atualizarInterface(null, null);
+        construirEstruturaApp();
+        atualizarTodasAsTelas(null, null);
+        navegarParaTela(TELA_INICIO, this.btnMenuInicio);
+    }
+
+    private Path arquivoLocalOuPadrao(Path caminho) {
+        return caminho != null ? caminho : Path.of("data", "financehub-dados.db");
     }
 
     private void configurarCoresDialogo() {
@@ -242,39 +261,46 @@ public class FinanceHubSwingFrame extends JFrame {
         }
     }
 
-    private void construirJanela() {
+    // ==================== ESTRUTURA GERAL DO APP (SIDEBAR + TELAS) ====================
+
+    private void construirEstruturaApp() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1380, 880);
-        setMinimumSize(new Dimension(1180, 760));
+        setSize(1360, 840);
+        setMinimumSize(new Dimension(1150, 720));
         setLocationRelativeTo(null);
 
-        JPanel painelRaiz = new JPanel(new BorderLayout(0, 14));
-        painelRaiz.setBackground(BG_PRETO);
-        painelRaiz.setBorder(new EmptyBorder(0, 0, 14, 0));
-        setContentPane(painelRaiz);
+        JPanel raiz = new JPanel(new BorderLayout(0, 0));
+        raiz.setBackground(BG_PRETO);
+        setContentPane(raiz);
 
-        painelRaiz.add(criarBarraTopo(), BorderLayout.NORTH);
+        raiz.add(criarMenuLateralFixo(), BorderLayout.WEST);
 
-        JPanel miolo = new JPanel(new BorderLayout(0, 14));
-        miolo.setBackground(BG_PRETO);
-        miolo.setBorder(new EmptyBorder(0, 18, 0, 18));
+        this.gerenciadorTelas = new CardLayout();
+        this.painelTelas = new JPanel(this.gerenciadorTelas);
+        this.painelTelas.setBackground(BG_PRETO);
+        this.painelTelas.setBorder(new EmptyBorder(20, 24, 20, 24));
 
-        miolo.add(criarPainelCincoCards(), BorderLayout.NORTH);
-        miolo.add(criarAreaTrabalhoCentral(), BorderLayout.CENTER);
+        this.painelTelas.add(criarTelaInicio(), TELA_INICIO);
+        this.painelTelas.add(criarTelaAdicionarLancamento(), TELA_ADICIONAR);
+        this.painelTelas.add(criarTelaExtratoPeriodo(), TELA_PERIODO);
+        this.painelTelas.add(criarTelaCategorias(), TELA_CATEGORIAS);
+        this.painelTelas.add(criarTelaArquivosEApi(), TELA_ARQUIVOS_API);
 
-        painelRaiz.add(miolo, BorderLayout.CENTER);
+        raiz.add(this.painelTelas, BorderLayout.CENTER);
     }
 
-    private JPanel criarBarraTopo() {
-        JPanel barra = new JPanel(new BorderLayout(16, 0));
-        barra.setBackground(CARD_CINZA);
-        barra.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 2, 0, CIANO_ESCURO),
-            new EmptyBorder(12, 20, 12, 20)
+    private JPanel criarMenuLateralFixo() {
+        JPanel sidebar = new JPanel(new BorderLayout(0, 20));
+        sidebar.setPreferredSize(new Dimension(245, 800));
+        sidebar.setBackground(BG_SIDEBAR);
+        sidebar.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 0, 1, BORDA_CINZA),
+            new EmptyBorder(20, 16, 20, 16)
         ));
 
-        JPanel esquerda = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        esquerda.setOpaque(false);
+        // Topo do menu: Logo + Nome do App
+        JPanel blocoMarca = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        blocoMarca.setOpaque(false);
 
         JLabel logo = new JLabel("FH", SwingConstants.CENTER);
         logo.setPreferredSize(new Dimension(44, 44));
@@ -287,95 +313,1331 @@ public class FinanceHubSwingFrame extends JFrame {
         textosMarca.setLayout(new BoxLayout(textosMarca, BoxLayout.Y_AXIS));
         textosMarca.setOpaque(false);
 
-        JLabel titulo = new JLabel("FinanceHub");
-        titulo.setForeground(TEXTO_CLARO);
-        titulo.setFont(FONTE_TITULO);
+        JLabel nomeApp = new JLabel("FinanceHub");
+        nomeApp.setForeground(TEXTO_CLARO);
+        nomeApp.setFont(new Font("Segoe UI", Font.BOLD, 18));
 
-        this.lblUsuarioTopo = new JLabel();
-        this.lblUsuarioTopo.setForeground(CIANO_VIVO);
-        this.lblUsuarioTopo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        atualizarTextoUsuarioTopo();
+        JLabel subApp = new JLabel("Gestão Pessoal POO");
+        subApp.setForeground(CIANO_VIVO);
+        subApp.setFont(new Font("Segoe UI", Font.PLAIN, 11));
 
-        textosMarca.add(titulo);
-        textosMarca.add(this.lblUsuarioTopo);
+        textosMarca.add(nomeApp);
+        textosMarca.add(subApp);
 
-        esquerda.add(logo);
-        esquerda.add(textosMarca);
+        blocoMarca.add(logo);
+        blocoMarca.add(textosMarca);
 
-        JPanel direita = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
-        direita.setOpaque(false);
+        // Botões de navegação das 5 telas
+        JPanel menuBotoes = new JPanel();
+        menuBotoes.setLayout(new BoxLayout(menuBotoes, BoxLayout.Y_AXIS));
+        menuBotoes.setOpaque(false);
 
-        this.lblCotacaoTopo = new JLabel(
-            "  USD R$ " + this.cotacaoMoedaService.getUltimaCotacaoDolar() +
-            " | EUR R$ " + this.cotacaoMoedaService.getUltimaCotacaoEuro() + "  "
-        );
-        this.lblCotacaoTopo.setOpaque(true);
-        this.lblCotacaoTopo.setBackground(CARD_CINZA_CLARO);
-        this.lblCotacaoTopo.setForeground(CIANO_VIVO);
-        this.lblCotacaoTopo.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        this.lblCotacaoTopo.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(CIANO_ESCURO, 1, true),
-            new EmptyBorder(6, 10, 6, 10)
+        JLabel lblMenuTitulo = new JLabel("MENU PRINCIPAL");
+        lblMenuTitulo.setForeground(TEXTO_CINZA);
+        lblMenuTitulo.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        lblMenuTitulo.setBorder(new EmptyBorder(10, 6, 8, 0));
+        lblMenuTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        menuBotoes.add(lblMenuTitulo);
+
+        this.btnMenuInicio = criarBotaoMenuLateral("Início (Visão Geral)");
+        this.btnMenuAdicionar = criarBotaoMenuLateral("Adicionar Lançamento");
+        this.btnMenuPeriodo = criarBotaoMenuLateral("Extrato por Período");
+        this.btnMenuCategorias = criarBotaoMenuLateral("Categorias e Saldos");
+        this.btnMenuArquivos = criarBotaoMenuLateral("Arquivos CSV e Câmbio API");
+
+        this.btnMenuInicio.addActionListener(e -> navegarParaTela(TELA_INICIO, this.btnMenuInicio));
+        this.btnMenuAdicionar.addActionListener(e -> {
+            limparFormularioLancamento();
+            navegarParaTela(TELA_ADICIONAR, this.btnMenuAdicionar);
+        });
+        this.btnMenuPeriodo.addActionListener(e -> navegarParaTela(TELA_PERIODO, this.btnMenuPeriodo));
+        this.btnMenuCategorias.addActionListener(e -> navegarParaTela(TELA_CATEGORIAS, this.btnMenuCategorias));
+        this.btnMenuArquivos.addActionListener(e -> navegarParaTela(TELA_ARQUIVOS_API, this.btnMenuArquivos));
+
+        menuBotoes.add(this.btnMenuInicio);
+        menuBotoes.add(Box.createVerticalStrut(8));
+        menuBotoes.add(this.btnMenuAdicionar);
+        menuBotoes.add(Box.createVerticalStrut(8));
+        menuBotoes.add(this.btnMenuPeriodo);
+        menuBotoes.add(Box.createVerticalStrut(8));
+        menuBotoes.add(this.btnMenuCategorias);
+        menuBotoes.add(Box.createVerticalStrut(8));
+        menuBotoes.add(this.btnMenuArquivos);
+
+        // Rodapé do menu lateral: Perfil do Usuário e Meta
+        JPanel cardUsuarioSidebar = new JPanel();
+        cardUsuarioSidebar.setLayout(new BoxLayout(cardUsuarioSidebar, BoxLayout.Y_AXIS));
+        cardUsuarioSidebar.setBackground(CARD_CINZA);
+        cardUsuarioSidebar.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(12, 12, 12, 12)
         ));
 
-        JButton btnAtualizarCotacao = criarBotaoSecundario("Atualizar Câmbio (API)");
-        btnAtualizarCotacao.addActionListener(e -> acaoConsultarApiCotacao());
+        JLabel lblTitUser = new JLabel("TITULAR DA CONTA");
+        lblTitUser.setForeground(TEXTO_CINZA);
+        lblTitUser.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        lblTitUser.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton btnMeta = criarBotaoSecundario("Definir Meta Mensal");
-        btnMeta.addActionListener(e -> acaoDefinirMetaMensal());
+        this.lblUsuarioSidebar = new JLabel(this.usuarioAtual.getNome());
+        this.lblUsuarioSidebar.setForeground(TEXTO_CLARO);
+        this.lblUsuarioSidebar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        this.lblUsuarioSidebar.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton btnEditarUsuario = criarBotaoSecundario("Perfil do Usuário");
-        btnEditarUsuario.addActionListener(e -> acaoEditarUsuario());
+        this.lblEmailSidebar = new JLabel(this.usuarioAtual.getEmail());
+        this.lblEmailSidebar.setForeground(CIANO_VIVO);
+        this.lblEmailSidebar.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        this.lblEmailSidebar.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton btnImportar = criarBotaoSecundario("Importar CSV/TXT");
-        btnImportar.addActionListener(e -> acaoImportarArquivoDisco());
+        JButton btnEditarPerfil = criarBotaoSecundario("Editar Perfil / Meta");
+        btnEditarPerfil.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnEditarPerfil.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        btnEditarPerfil.addActionListener(e -> acaoEditarUsuarioEMeta());
 
-        JButton btnExportar = criarBotaoCiano("Exportar CSV");
-        btnExportar.addActionListener(e -> acaoExportarArquivoDisco());
+        cardUsuarioSidebar.add(lblTitUser);
+        cardUsuarioSidebar.add(Box.createVerticalStrut(4));
+        cardUsuarioSidebar.add(this.lblUsuarioSidebar);
+        cardUsuarioSidebar.add(this.lblEmailSidebar);
+        cardUsuarioSidebar.add(Box.createVerticalStrut(10));
+        cardUsuarioSidebar.add(btnEditarPerfil);
 
-        direita.add(this.lblCotacaoTopo);
-        direita.add(btnAtualizarCotacao);
-        direita.add(btnMeta);
-        direita.add(btnEditarUsuario);
-        direita.add(btnImportar);
-        direita.add(btnExportar);
-
-        barra.add(esquerda, BorderLayout.WEST);
-        barra.add(direita, BorderLayout.EAST);
-        return barra;
+        sidebar.add(blocoMarca, BorderLayout.NORTH);
+        sidebar.add(menuBotoes, BorderLayout.CENTER);
+        sidebar.add(cardUsuarioSidebar, BorderLayout.SOUTH);
+        return sidebar;
     }
 
-    private JPanel criarPainelCincoCards() {
-        JPanel grid = new JPanel(new GridLayout(1, 5, 12, 0));
-        grid.setOpaque(false);
+    private JButton criarBotaoMenuLateral(String texto) {
+        JButton btn = new JButton(texto);
+        btn.setHorizontalAlignment(SwingConstants.LEFT);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        aplicarEstiloBotaoMenu(btn, false);
+        return btn;
+    }
 
-        this.lblValorReceitas = new JLabel("R$ 0,00");
-        this.lblQtdReceitas = new JLabel("0 entradas");
+    private void aplicarEstiloBotaoMenu(JButton btn, boolean ativo) {
+        if (ativo) {
+            btn.setBackground(CIANO_VIVO);
+            btn.setForeground(BG_PRETO);
+            btn.setBorder(new EmptyBorder(10, 14, 10, 14));
+        } else {
+            btn.setBackground(CARD_CINZA);
+            btn.setForeground(TEXTO_CLARO);
+            btn.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDA_CINZA, 1, true),
+                new EmptyBorder(9, 13, 9, 13)
+            ));
+        }
+    }
+
+    private void navegarParaTela(String identificadorTela, JButton botaoAtivo) {
+        this.gerenciadorTelas.show(this.painelTelas, identificadorTela);
+        aplicarEstiloBotaoMenu(this.btnMenuInicio, botaoAtivo == this.btnMenuInicio);
+        aplicarEstiloBotaoMenu(this.btnMenuAdicionar, botaoAtivo == this.btnMenuAdicionar);
+        aplicarEstiloBotaoMenu(this.btnMenuPeriodo, botaoAtivo == this.btnMenuPeriodo);
+        aplicarEstiloBotaoMenu(this.btnMenuCategorias, botaoAtivo == this.btnMenuCategorias);
+        aplicarEstiloBotaoMenu(this.btnMenuArquivos, botaoAtivo == this.btnMenuArquivos);
+    }
+
+    // ==================== TELA 1: INÍCIO (VISÃO GERAL / DASHBOARD) ====================
+
+    private JPanel criarTelaInicio() {
+        JPanel tela = new JPanel(new BorderLayout(0, 16));
+        tela.setOpaque(false);
+
+        // Cabeçalho da tela Início
+        JPanel cabecalho = new JPanel(new BorderLayout());
+        cabecalho.setOpaque(false);
+
+        JPanel titulos = new JPanel();
+        titulos.setLayout(new BoxLayout(titulos, BoxLayout.Y_AXIS));
+        titulos.setOpaque(false);
+
+        JLabel titulo = new JLabel("Visão Geral do Orçamento");
+        titulo.setForeground(TEXTO_CLARO);
+        titulo.setFont(FONTE_TITULO_PAGINA);
+
+        JLabel subtitulo = new JLabel("Resumo consolidado das suas receitas, despesas, metas e indicadores polimórficos");
+        subtitulo.setForeground(TEXTO_CINZA);
+        subtitulo.setFont(FONTE_TEXTO);
+
+        titulos.add(titulo);
+        titulos.add(Box.createVerticalStrut(2));
+        titulos.add(subtitulo);
+
+        JPanel acoesRapidasTopo = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        acoesRapidasTopo.setOpaque(false);
+
+        JButton btnIrAdicionar = criarBotaoCiano("+ Novo Lançamento");
+        btnIrAdicionar.addActionListener(e -> {
+            limparFormularioLancamento();
+            navegarParaTela(TELA_ADICIONAR, this.btnMenuAdicionar);
+        });
+
+        JButton btnIrPeriodo = criarBotaoSecundario("Filtrar por Período");
+        btnIrPeriodo.addActionListener(e -> navegarParaTela(TELA_PERIODO, this.btnMenuPeriodo));
+
+        acoesRapidasTopo.add(btnIrPeriodo);
+        acoesRapidasTopo.add(btnIrAdicionar);
+
+        cabecalho.add(titulos, BorderLayout.WEST);
+        cabecalho.add(acoesRapidasTopo, BorderLayout.EAST);
+
+        // Grade de 5 Cards de Resumo
+        JPanel gradeCards = new JPanel(new GridLayout(1, 5, 12, 0));
+        gradeCards.setOpaque(false);
+
+        this.lblCardReceitas = new JLabel("R$ 0,00");
+        this.lblSubReceitas = new JLabel("0 entradas");
         this.barraReceitas = criarBarraProgresso(VERDE_RECEITA);
-        grid.add(criarCardDashboard("RECEITAS (+)", this.lblValorReceitas, this.lblQtdReceitas, this.barraReceitas, VERDE_RECEITA));
+        gradeCards.add(criarCardDashboard("RECEITAS TOTAIS", this.lblCardReceitas, this.lblSubReceitas, this.barraReceitas, VERDE_RECEITA));
 
-        this.lblValorDespesas = new JLabel("R$ 0,00");
-        this.lblQtdDespesas = new JLabel("0 saídas");
+        this.lblCardDespesas = new JLabel("R$ 0,00");
+        this.lblSubDespesas = new JLabel("0 saídas");
         this.barraDespesas = criarBarraProgresso(CORAL_DESPESA);
-        grid.add(criarCardDashboard("DESPESAS (-)", this.lblValorDespesas, this.lblQtdDespesas, this.barraDespesas, CORAL_DESPESA));
+        gradeCards.add(criarCardDashboard("DESPESAS TOTAIS", this.lblCardDespesas, this.lblSubDespesas, this.barraDespesas, CORAL_DESPESA));
 
-        this.lblValorSaldo = new JLabel("R$ 0,00");
-        this.lblTaxaPoupanca = new JLabel("Taxa de poupança: 0%");
+        this.lblCardSaldo = new JLabel("R$ 0,00");
+        this.lblSubPoupanca = new JLabel("Poupança: 0%");
         this.barraPoupanca = criarBarraProgresso(CIANO_VIVO);
-        grid.add(criarCardDashboard("SALDO LÍQUIDO (R$)", this.lblValorSaldo, this.lblTaxaPoupanca, this.barraPoupanca, CIANO_VIVO));
+        gradeCards.add(criarCardDashboard("SALDO LÍQUIDO (R$)", this.lblCardSaldo, this.lblSubPoupanca, this.barraPoupanca, CIANO_VIVO));
 
-        this.lblValorMeta = new JLabel("R$ 3.500,00");
-        this.lblDetalheMeta = new JLabel("0% do limite utilizado");
-        this.barraMetaGastos = criarBarraProgresso(CIANO_VIVO);
-        grid.add(criarCardDashboard("META DE GASTOS MENSAL", this.lblValorMeta, this.lblDetalheMeta, this.barraMetaGastos, AMBAR_ALERTA));
+        this.lblCardMeta = new JLabel("R$ 3.500,00");
+        this.lblSubMeta = new JLabel("0% utilizado");
+        this.barraMeta = criarBarraProgresso(CIANO_VIVO);
+        gradeCards.add(criarCardDashboard("META DE GASTOS", this.lblCardMeta, this.lblSubMeta, this.barraMeta, AMBAR_ALERTA));
 
-        this.lblValorSaldoDolar = new JLabel("US$ 0.00");
-        this.lblDetalheCambio = new JLabel("€ 0.00 (API Externa)");
+        this.lblCardCambio = new JLabel("US$ 0.00");
+        this.lblSubCambio = new JLabel("€ 0.00 (API)");
         JProgressBar barraCambio = criarBarraProgresso(CIANO_ESCURO);
         barraCambio.setValue(100);
-        grid.add(criarCardDashboard("SALDO EM USD / EUR (API)", this.lblValorSaldoDolar, this.lblDetalheCambio, barraCambio, CIANO_VIVO));
+        gradeCards.add(criarCardDashboard("SALDO EM USD / EUR", this.lblCardCambio, this.lblSubCambio, barraCambio, CIANO_VIVO));
 
-        return grid;
+        JPanel blocoNorte = new JPanel(new BorderLayout(0, 16));
+        blocoNorte.setOpaque(false);
+        blocoNorte.add(cabecalho, BorderLayout.NORTH);
+        blocoNorte.add(gradeCards, BorderLayout.CENTER);
+
+        // Miolo da tela Início: Esquerda (Gráfico por Categoria + Insights) | Direita (Últimos Lançamentos)
+        JPanel mioloInicio = new JPanel(new GridLayout(1, 2, 16, 0));
+        mioloInicio.setOpaque(false);
+
+        JPanel colunaAnalise = new JPanel(new BorderLayout(0, 14));
+        colunaAnalise.setOpaque(false);
+
+        // Card de Barras por Categoria
+        JPanel cardBarras = criarCardPadrao("Distribuição de Saldo por Categoria");
+        this.painelBarrasCategoriasInicio = new JPanel();
+        this.painelBarrasCategoriasInicio.setLayout(new BoxLayout(this.painelBarrasCategoriasInicio, BoxLayout.Y_AXIS));
+        this.painelBarrasCategoriasInicio.setBackground(CARD_CINZA);
+
+        JScrollPane scrollBarras = new JScrollPane(this.painelBarrasCategoriasInicio);
+        scrollBarras.setBorder(null);
+        scrollBarras.getViewport().setBackground(CARD_CINZA);
+        cardBarras.add(scrollBarras, BorderLayout.CENTER);
+
+        // Card de 4 Indicadores
+        JPanel cardInsights = criarCardPadrao("Indicadores e Diagnóstico Financeiro");
+        JPanel gradeInsights = new JPanel(new GridLayout(2, 2, 10, 10));
+        gradeInsights.setOpaque(false);
+
+        this.lblInsightMaiorReceita = new JLabel("-");
+        this.lblInsightMaiorDespesa = new JLabel("-");
+        this.lblInsightTicketMedio = new JLabel("-");
+        this.lblInsightStatusOrcamento = new JLabel("-");
+
+        gradeInsights.add(criarMiniCardInsight("MAIOR RECEITA", this.lblInsightMaiorReceita, VERDE_RECEITA));
+        gradeInsights.add(criarMiniCardInsight("MAIOR DESPESA", this.lblInsightMaiorDespesa, CORAL_DESPESA));
+        gradeInsights.add(criarMiniCardInsight("TICKET MÉDIO", this.lblInsightTicketMedio, CIANO_VIVO));
+        gradeInsights.add(criarMiniCardInsight("DIAGNÓSTICO DO MÊS", this.lblInsightStatusOrcamento, CIANO_VIVO));
+        cardInsights.add(gradeInsights, BorderLayout.CENTER);
+
+        colunaAnalise.add(cardBarras, BorderLayout.CENTER);
+        colunaAnalise.add(cardInsights, BorderLayout.SOUTH);
+
+        // Card de Movimentações Recentes
+        JPanel cardRecentes = criarCardPadrao("Últimas Movimentações Registradas");
+        String[] colRecentes = {"Data", "Tipo", "Resumo (Polimorfismo)", "Categoria", "Impacto"};
+        this.modeloTabelaRecentes = new DefaultTableModel(colRecentes, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        JTable tabRecentes = criarTabelaEstilizada(this.modeloTabelaRecentes, 1, 4);
+        JScrollPane scrollRecentes = new JScrollPane(tabRecentes);
+        scrollRecentes.getViewport().setBackground(BG_CAMPO);
+        scrollRecentes.setBorder(new LineBorder(BORDA_CINZA, 1));
+        cardRecentes.add(scrollRecentes, BorderLayout.CENTER);
+
+        mioloInicio.add(colunaAnalise);
+        mioloInicio.add(cardRecentes);
+
+        tela.add(blocoNorte, BorderLayout.NORTH);
+        tela.add(mioloInicio, BorderLayout.CENTER);
+        return tela;
+    }
+
+    // ==================== TELA 2: ADICIONAR / EDITAR LANÇAMENTO ====================
+
+    private JPanel criarTelaAdicionarLancamento() {
+        JPanel tela = new JPanel(new BorderLayout(0, 18));
+        tela.setOpaque(false);
+
+        JPanel cabecalho = new JPanel(new BorderLayout());
+        cabecalho.setOpaque(false);
+
+        this.lblTituloFormulario = new JLabel("Adicionar Novo Lançamento Financeiro");
+        this.lblTituloFormulario.setForeground(TEXTO_CLARO);
+        this.lblTituloFormulario.setFont(FONTE_TITULO_PAGINA);
+        cabecalho.add(this.lblTituloFormulario, BorderLayout.WEST);
+
+        // Card central amplo para o formulário
+        JPanel wrapperCentro = new JPanel(new GridLayout(1, 2, 20, 0));
+        wrapperCentro.setOpaque(false);
+
+        JPanel cardForm = new JPanel();
+        cardForm.setLayout(new BoxLayout(cardForm, BoxLayout.Y_AXIS));
+        cardForm.setBackground(CARD_CINZA);
+        cardForm.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(24, 28, 24, 28)
+        ));
+
+        JLabel subForm = new JLabel("Dados da Movimentação (Receita ou Despesa)");
+        subForm.setForeground(CIANO_VIVO);
+        subForm.setFont(FONTE_SECAO);
+        cardForm.add(criarBlocoTituloComBarraCiano(subForm));
+        cardForm.add(Box.createVerticalStrut(18));
+
+        this.cmbTipo = new JComboBox<>(new String[]{"RECEITA", "DESPESA"});
+        estilizarCombo(this.cmbTipo);
+
+        this.txtDescricao = criarCampoTexto("");
+        this.txtValor = criarCampoTexto("250.00");
+        this.txtData = criarCampoTexto(LocalDate.now().toString());
+
+        this.cmbCategoria = new JComboBox<>(this.modeloComboCategorias);
+        estilizarCombo(this.cmbCategoria);
+        this.cmbCategoria.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel lbl = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Categoria c) {
+                    lbl.setText(c.getId() + " - " + c.getNome());
+                }
+                lbl.setBackground(isSelected ? CIANO_ESCURO : BG_CAMPO);
+                lbl.setForeground(isSelected ? BG_PRETO : TEXTO_CLARO);
+                lbl.setBorder(new EmptyBorder(6, 10, 6, 10));
+                return lbl;
+            }
+        });
+
+        cardForm.add(criarRotulo("1. TIPO DE LANÇAMENTO (HERANÇA POO: RECEITA OU DESPESA)"));
+        cardForm.add(this.cmbTipo);
+        cardForm.add(Box.createVerticalStrut(14));
+
+        cardForm.add(criarRotulo("2. DESCRIÇÃO DETALHADA"));
+        cardForm.add(this.txtDescricao);
+        cardForm.add(Box.createVerticalStrut(14));
+
+        cardForm.add(criarRotulo("3. VALOR EM REAIS (R$)"));
+        cardForm.add(this.txtValor);
+        cardForm.add(Box.createVerticalStrut(14));
+
+        cardForm.add(criarRotulo("4. DATA DO LANÇAMENTO (AAAA-MM-DD)"));
+        cardForm.add(this.txtData);
+        cardForm.add(Box.createVerticalStrut(8));
+
+        JPanel botoesDataRapida = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        botoesDataRapida.setOpaque(false);
+        botoesDataRapida.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton btnHoje = criarBotaoSecundario("Hoje");
+        btnHoje.addActionListener(e -> this.txtData.setText(LocalDate.now().toString()));
+
+        JButton btnOntem = criarBotaoSecundario("Ontem");
+        btnOntem.addActionListener(e -> this.txtData.setText(LocalDate.now().minusDays(1).toString()));
+
+        JButton btnInicioMes = criarBotaoSecundario("Dia 1 do Mês");
+        btnInicioMes.addActionListener(e -> this.txtData.setText(LocalDate.now().withDayOfMonth(1).toString()));
+
+        botoesDataRapida.add(btnHoje);
+        botoesDataRapida.add(btnOntem);
+        botoesDataRapida.add(btnInicioMes);
+        cardForm.add(botoesDataRapida);
+        cardForm.add(Box.createVerticalStrut(14));
+
+        cardForm.add(criarRotulo("5. CATEGORIA ASSOCIADA"));
+        cardForm.add(this.cmbCategoria);
+        cardForm.add(Box.createVerticalStrut(24));
+
+        JButton btnSalvar = criarBotaoCiano("Salvar Lançamento e Ir para o Extrato");
+        btnSalvar.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnSalvar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        btnSalvar.addActionListener(e -> acaoSalvarLancamento());
+        cardForm.add(btnSalvar);
+
+        cardForm.add(Box.createVerticalStrut(10));
+
+        JButton btnLimpar = criarBotaoSecundario("Limpar Campos / Cancelar Edição");
+        btnLimpar.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnLimpar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        btnLimpar.addActionListener(e -> limparFormularioLancamento());
+        cardForm.add(btnLimpar);
+
+        // Card explicativo à direita mostrando o funcionamento POO em tempo real
+        JPanel cardExplicacao = criarCardPadrao("Como o Sistema Processa este Lançamento (POO)");
+        JPanel textoExp = new JPanel();
+        textoExp.setLayout(new BoxLayout(textoExp, BoxLayout.Y_AXIS));
+        textoExp.setOpaque(false);
+        textoExp.setBorder(new EmptyBorder(10, 4, 10, 4));
+
+        textoExp.add(criarItemExplicacao(
+            "Herança e Especialização",
+            "Ao selecionar RECEITA ou DESPESA, o sistema instancia a subclasse correspondente que herda da classe abstrata Lancamento."
+        ));
+        textoExp.add(Box.createVerticalStrut(14));
+        textoExp.add(criarItemExplicacao(
+            "Polimorfismo (calcularImpacto e getResumo)",
+            "• Receita retorna impacto positivo (+valor) e sobrescreve getResumo().\n• Despesa retorna impacto negativo (-valor) e sobrescreve getResumo()."
+        ));
+        textoExp.add(Box.createVerticalStrut(14));
+        textoExp.add(criarItemExplicacao(
+            "Associação entre Objetos",
+            "O lançamento é automaticamente associado ao objeto Categoria selecionado e à coleção do Usuario ativo."
+        ));
+        textoExp.add(Box.createVerticalStrut(14));
+        textoExp.add(criarItemExplicacao(
+            "Persistência via Interface (RepositorioDados)",
+            "Ao clicar em Salvar, o contrato RepositorioDados grava imediatamente os objetos atualizados em disco."
+        ));
+
+        cardExplicacao.add(textoExp, BorderLayout.CENTER);
+
+        wrapperCentro.add(cardForm);
+        wrapperCentro.add(cardExplicacao);
+
+        tela.add(cabecalho, BorderLayout.NORTH);
+        tela.add(wrapperCentro, BorderLayout.CENTER);
+        return tela;
+    }
+
+    private JPanel criarItemExplicacao(String titulo, String descricao) {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBackground(BG_CAMPO);
+        p.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(12, 14, 12, 14)
+        ));
+
+        JLabel lblT = new JLabel(titulo);
+        lblT.setForeground(CIANO_VIVO);
+        lblT.setFont(new Font("Segoe UI", Font.BOLD, 13));
+
+        JLabel lblD = new JLabel("<html><body style='width: 380px'>" + descricao.replace("\n", "<br>") + "</body></html>");
+        lblD.setForeground(TEXTO_CINZA);
+        lblD.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblD.setBorder(new EmptyBorder(4, 0, 0, 0));
+
+        p.add(lblT);
+        p.add(lblD);
+        return p;
+    }
+
+    // ==================== TELA 3: EXTRATO E VERIFICAÇÃO POR PERÍODO ====================
+
+    private JPanel criarTelaExtratoPeriodo() {
+        JPanel tela = new JPanel(new BorderLayout(0, 14));
+        tela.setOpaque(false);
+
+        // Cabeçalho + 3 Cards de Resumo do Período Filtrado
+        JPanel topoPeriodo = new JPanel(new BorderLayout(0, 12));
+        topoPeriodo.setOpaque(false);
+
+        JLabel titulo = new JLabel("Consulta de Extrato e Verificação por Período");
+        titulo.setForeground(TEXTO_CLARO);
+        titulo.setFont(FONTE_TITULO_PAGINA);
+
+        JPanel cardsPeriodo = new JPanel(new GridLayout(1, 3, 14, 0));
+        cardsPeriodo.setOpaque(false);
+
+        this.lblPeriodoReceitas = new JLabel("R$ 0,00");
+        this.lblPeriodoDespesas = new JLabel("R$ 0,00");
+        this.lblPeriodoSaldo = new JLabel("R$ 0,00");
+
+        cardsPeriodo.add(criarCardDashboard("RECEITAS NO PERÍODO FILTRADO", this.lblPeriodoReceitas, new JLabel("Soma das entradas exibidas"), null, VERDE_RECEITA));
+        cardsPeriodo.add(criarCardDashboard("DESPESAS NO PERÍODO FILTRADO", this.lblPeriodoDespesas, new JLabel("Soma das saídas exibidas"), null, CORAL_DESPESA));
+        cardsPeriodo.add(criarCardDashboard("SALDO DO PERÍODO FILTRADO", this.lblPeriodoSaldo, new JLabel("Resultado polimórfico do filtro"), null, CIANO_VIVO));
+
+        topoPeriodo.add(titulo, BorderLayout.NORTH);
+        topoPeriodo.add(cardsPeriodo, BorderLayout.CENTER);
+
+        // Painel de Filtros e Tabela Completa
+        JPanel cardTabela = new JPanel(new BorderLayout(0, 12));
+        cardTabela.setBackground(CARD_CINZA);
+        cardTabela.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(16, 18, 16, 18)
+        ));
+
+        JPanel barraSuperiorFiltros = new JPanel(new BorderLayout(8, 8));
+        barraSuperiorFiltros.setOpaque(false);
+
+        JPanel linhaAtalhos = new JPanel(new BorderLayout());
+        linhaAtalhos.setOpaque(false);
+
+        this.lblResumoPeriodoTexto = new JLabel("Exibindo todos os lançamentos");
+        this.lblResumoPeriodoTexto.setForeground(CIANO_VIVO);
+        this.lblResumoPeriodoTexto.setFont(new Font("Segoe UI", Font.BOLD, 13));
+
+        JPanel botoesRapidos = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        botoesRapidos.setOpaque(false);
+
+        JButton btnMesAtual = criarBotaoSecundario("Mês Atual");
+        btnMesAtual.addActionListener(e -> {
+            LocalDate hoje = LocalDate.now();
+            this.txtFiltroInicio.setText(hoje.withDayOfMonth(1).toString());
+            this.txtFiltroFim.setText(hoje.withDayOfMonth(hoje.lengthOfMonth()).toString());
+            acaoAplicarFiltros();
+        });
+
+        JButton btnUltimos30 = criarBotaoSecundario("Últimos 30 Dias");
+        btnUltimos30.addActionListener(e -> {
+            LocalDate hoje = LocalDate.now();
+            this.txtFiltroInicio.setText(hoje.minusDays(30).toString());
+            this.txtFiltroFim.setText(hoje.toString());
+            acaoAplicarFiltros();
+        });
+
+        JButton btnAnoAtual = criarBotaoSecundario("Ano Atual");
+        btnAnoAtual.addActionListener(e -> {
+            LocalDate hoje = LocalDate.now();
+            this.txtFiltroInicio.setText(LocalDate.of(hoje.getYear(), 1, 1).toString());
+            this.txtFiltroFim.setText(LocalDate.of(hoje.getYear(), 12, 31).toString());
+            acaoAplicarFiltros();
+        });
+
+        botoesRapidos.add(btnMesAtual);
+        botoesRapidos.add(btnUltimos30);
+        botoesRapidos.add(btnAnoAtual);
+
+        linhaAtalhos.add(this.lblResumoPeriodoTexto, BorderLayout.WEST);
+        linhaAtalhos.add(botoesRapidos, BorderLayout.EAST);
+
+        JPanel controlesFiltro = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        controlesFiltro.setOpaque(false);
+
+        this.txtBuscaDescricao = criarCampoTexto("");
+        this.txtBuscaDescricao.setPreferredSize(new Dimension(170, 32));
+
+        this.cmbFiltroTipo = new JComboBox<>(new String[]{"TODOS", "RECEITA", "DESPESA"});
+        estilizarCombo(this.cmbFiltroTipo);
+        this.cmbFiltroTipo.setPreferredSize(new Dimension(120, 32));
+
+        this.txtFiltroInicio = criarCampoTexto("");
+        this.txtFiltroInicio.setPreferredSize(new Dimension(110, 32));
+
+        this.txtFiltroFim = criarCampoTexto("");
+        this.txtFiltroFim.setPreferredSize(new Dimension(110, 32));
+
+        JButton btnFiltrar = criarBotaoCiano("Aplicar Filtro");
+        btnFiltrar.addActionListener(e -> acaoAplicarFiltros());
+
+        JButton btnLimpar = criarBotaoSecundario("Mostrar Todos");
+        btnLimpar.addActionListener(e -> {
+            this.txtBuscaDescricao.setText("");
+            this.cmbFiltroTipo.setSelectedIndex(0);
+            this.txtFiltroInicio.setText("");
+            this.txtFiltroFim.setText("");
+            atualizarTodasAsTelas(null, null);
+        });
+
+        controlesFiltro.add(criarRotuloInline("Descrição:"));
+        controlesFiltro.add(this.txtBuscaDescricao);
+        controlesFiltro.add(criarRotuloInline("Tipo:"));
+        controlesFiltro.add(this.cmbFiltroTipo);
+        controlesFiltro.add(criarRotuloInline("Data Início:"));
+        controlesFiltro.add(this.txtFiltroInicio);
+        controlesFiltro.add(criarRotuloInline("Data Fim:"));
+        controlesFiltro.add(this.txtFiltroFim);
+        controlesFiltro.add(btnFiltrar);
+        controlesFiltro.add(btnLimpar);
+
+        barraSuperiorFiltros.add(linhaAtalhos, BorderLayout.NORTH);
+        barraSuperiorFiltros.add(controlesFiltro, BorderLayout.SOUTH);
+
+        String[] colunas = {"ID", "Data", "Tipo", "Resumo (Sobrescrita getResumo)", "Categoria", "Impacto (calcularImpacto)"};
+        this.modeloTabelaPeriodo = new DefaultTableModel(colunas, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        this.tabelaPeriodo = criarTabelaEstilizada(this.modeloTabelaPeriodo, 2, 5);
+        this.tabelaPeriodo.getColumnModel().getColumn(0).setPreferredWidth(45);
+        this.tabelaPeriodo.getColumnModel().getColumn(1).setPreferredWidth(95);
+        this.tabelaPeriodo.getColumnModel().getColumn(2).setPreferredWidth(90);
+        this.tabelaPeriodo.getColumnModel().getColumn(3).setPreferredWidth(300);
+        this.tabelaPeriodo.getColumnModel().getColumn(4).setPreferredWidth(130);
+        this.tabelaPeriodo.getColumnModel().getColumn(5).setPreferredWidth(140);
+
+        this.tabelaPeriodo.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && tabelaPeriodo.getSelectedRow() >= 0) {
+                    acaoCarregarLancamentoParaEdicao();
+                }
+            }
+        });
+
+        JScrollPane scroll = new JScrollPane(this.tabelaPeriodo);
+        scroll.getViewport().setBackground(BG_CAMPO);
+        scroll.setBorder(new LineBorder(BORDA_CINZA, 1));
+
+        JPanel rodape = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        rodape.setOpaque(false);
+
+        JButton btnDuplicar = criarBotaoSecundario("Duplicar Selecionado");
+        btnDuplicar.addActionListener(e -> acaoDuplicarLancamentoSelecionado());
+
+        JButton btnEditar = criarBotaoCiano("Editar Lançamento Selecionado");
+        btnEditar.addActionListener(e -> acaoCarregarLancamentoParaEdicao());
+
+        JButton btnExcluir = criarBotaoPerigo("Excluir Lançamento Selecionado");
+        btnExcluir.addActionListener(e -> acaoExcluirLancamentoSelecionado());
+
+        rodape.add(btnDuplicar);
+        rodape.add(btnEditar);
+        rodape.add(btnExcluir);
+
+        cardTabela.add(barraSuperiorFiltros, BorderLayout.NORTH);
+        cardTabela.add(scroll, BorderLayout.CENTER);
+        cardTabela.add(rodape, BorderLayout.SOUTH);
+
+        tela.add(topoPeriodo, BorderLayout.NORTH);
+        tela.add(cardTabela, BorderLayout.CENTER);
+        return tela;
+    }
+
+    // ==================== TELA 4: CATEGORIAS E SALDOS ====================
+
+    private JPanel criarTelaCategorias() {
+        JPanel tela = new JPanel(new BorderLayout(0, 16));
+        tela.setOpaque(false);
+
+        JLabel titulo = new JLabel("Gerenciamento de Categorias e Saldos Polimórficos");
+        titulo.setForeground(TEXTO_CLARO);
+        titulo.setFont(FONTE_TITULO_PAGINA);
+        tela.add(titulo, BorderLayout.NORTH);
+
+        JPanel miolo = new JPanel(new BorderLayout(18, 0));
+        miolo.setOpaque(false);
+
+        // Card esquerdo: Criar nova categoria
+        JPanel cardCriar = new JPanel();
+        cardCriar.setPreferredSize(new Dimension(360, 400));
+        cardCriar.setLayout(new BoxLayout(cardCriar, BoxLayout.Y_AXIS));
+        cardCriar.setBackground(CARD_CINZA);
+        cardCriar.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(20, 22, 20, 22)
+        ));
+
+        JLabel subCriar = new JLabel("Nova Categoria");
+        subCriar.setForeground(CIANO_VIVO);
+        subCriar.setFont(FONTE_SECAO);
+        cardCriar.add(criarBlocoTituloComBarraCiano(subCriar));
+        cardCriar.add(Box.createVerticalStrut(16));
+
+        cardCriar.add(criarRotulo("NOME DA CATEGORIA"));
+        this.txtNovaCategoria = criarCampoTexto("");
+        cardCriar.add(this.txtNovaCategoria);
+        cardCriar.add(Box.createVerticalStrut(14));
+
+        JButton btnAdicionar = criarBotaoCiano("Cadastrar Categoria");
+        btnAdicionar.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnAdicionar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btnAdicionar.addActionListener(e -> acaoAdicionarCategoria());
+        cardCriar.add(btnAdicionar);
+        cardCriar.add(Box.createVerticalStrut(22));
+
+        cardCriar.add(criarItemExplicacao(
+            "Proteção de Integridade",
+            "Uma categoria só pode ser removida se não possuir lançamentos associados a ela, preservando a consistência dos objetos."
+        ));
+
+        // Card direito: Tabela de categorias com saldo individual
+        JPanel cardLista = criarCardPadrao("Categorias Cadastradas e Saldo Individual (Categoria.calcularSaldo)");
+        String[] colCat = {"ID", "Nome da Categoria", "Qtd. Lançamentos", "Saldo Polimórfico (R$)"};
+        this.modeloTabelaCategorias = new DefaultTableModel(colCat, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        this.tabelaCategorias = criarTabelaEstilizada(this.modeloTabelaCategorias, -1, 3);
+        JScrollPane scrollCat = new JScrollPane(this.tabelaCategorias);
+        scrollCat.getViewport().setBackground(BG_CAMPO);
+        scrollCat.setBorder(new LineBorder(BORDA_CINZA, 1));
+
+        JPanel rodapeCat = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 8));
+        rodapeCat.setOpaque(false);
+        JButton btnRemoverCat = criarBotaoPerigo("Remover Categoria Selecionada");
+        btnRemoverCat.addActionListener(e -> acaoRemoverCategoria());
+        rodapeCat.add(btnRemoverCat);
+
+        cardLista.add(scrollCat, BorderLayout.CENTER);
+        cardLista.add(rodapeCat, BorderLayout.SOUTH);
+
+        miolo.add(cardCriar, BorderLayout.WEST);
+        miolo.add(cardLista, BorderLayout.CENTER);
+
+        tela.add(miolo, BorderLayout.CENTER);
+        return tela;
+    }
+
+    // ==================== TELA 5: ARQUIVOS CSV/TXT E CÂMBIO API ====================
+
+    private JPanel criarTelaArquivosEApi() {
+        JPanel tela = new JPanel(new BorderLayout(0, 16));
+        tela.setOpaque(false);
+
+        JLabel titulo = new JLabel("Importação/Exportação de Arquivos CSV e Integração com API");
+        titulo.setForeground(TEXTO_CLARO);
+        titulo.setFont(FONTE_TITULO_PAGINA);
+        tela.add(titulo, BorderLayout.NORTH);
+
+        JPanel grade = new JPanel(new GridLayout(1, 2, 18, 0));
+        grade.setOpaque(false);
+
+        // Card Esquerdo: Importar e Exportar CSV/TXT
+        JPanel cardCsv = new JPanel();
+        cardCsv.setLayout(new BoxLayout(cardCsv, BoxLayout.Y_AXIS));
+        cardCsv.setBackground(CARD_CINZA);
+        cardCsv.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(20, 22, 20, 22)
+        ));
+
+        JLabel subCsv = new JLabel("Leitura e Escrita de Arquivos CSV / TXT");
+        subCsv.setForeground(CIANO_VIVO);
+        subCsv.setFont(FONTE_SECAO);
+        cardCsv.add(criarBlocoTituloComBarraCiano(subCsv));
+        cardCsv.add(Box.createVerticalStrut(14));
+
+        JPanel botoesArquivoDisco = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        botoesArquivoDisco.setOpaque(false);
+        botoesArquivoDisco.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton btnAbrirArquivo = criarBotaoCiano("Selecionar Arquivo CSV/TXT do Computador");
+        btnAbrirArquivo.addActionListener(e -> acaoImportarArquivoDisco());
+
+        JButton btnExportarArquivo = criarBotaoSecundario("Exportar Histórico para CSV");
+        btnExportarArquivo.addActionListener(e -> acaoExportarArquivoDisco());
+
+        botoesArquivoDisco.add(btnAbrirArquivo);
+        botoesArquivoDisco.add(btnExportarArquivo);
+        cardCsv.add(botoesArquivoDisco);
+        cardCsv.add(Box.createVerticalStrut(18));
+
+        cardCsv.add(criarRotulo("OU COLE LINHAS NO FORMATO: TIPO;DESCRICAO;VALOR;DATA;CATEGORIA"));
+        this.txtAreaCsv = new JTextArea(10, 30);
+        this.txtAreaCsv.setBackground(BG_CAMPO);
+        this.txtAreaCsv.setForeground(TEXTO_CLARO);
+        this.txtAreaCsv.setCaretColor(CIANO_VIVO);
+        this.txtAreaCsv.setFont(new Font("Consolas", Font.PLAIN, 13));
+        this.txtAreaCsv.setText(
+            "RECEITA;Freelance Java;950.00;" + LocalDate.now() + ";Trabalho\n" +
+            "DESPESA;Livros POO;140.00;" + LocalDate.now() + ";Trabalho"
+        );
+
+        JScrollPane scrollCsv = new JScrollPane(this.txtAreaCsv);
+        scrollCsv.setAlignmentX(Component.LEFT_ALIGNMENT);
+        scrollCsv.setBorder(new LineBorder(BORDA_CINZA, 1));
+        cardCsv.add(scrollCsv);
+        cardCsv.add(Box.createVerticalStrut(12));
+
+        JButton btnImportarTexto = criarBotaoCiano("Importar Linhas Coladas Acima");
+        btnImportarTexto.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnImportarTexto.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btnImportarTexto.addActionListener(e -> acaoImportarTextoCsv());
+        cardCsv.add(btnImportarTexto);
+
+        // Card Direito: Câmbio via API Externa
+        JPanel cardApi = new JPanel();
+        cardApi.setLayout(new BoxLayout(cardApi, BoxLayout.Y_AXIS));
+        cardApi.setBackground(CARD_CINZA);
+        cardApi.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(20, 22, 20, 22)
+        ));
+
+        JLabel subApi = new JLabel("Integração com Serviço Externo via API (AwesomeAPI)");
+        subApi.setForeground(CIANO_VIVO);
+        subApi.setFont(FONTE_SECAO);
+        cardApi.add(criarBlocoTituloComBarraCiano(subApi));
+        cardApi.add(Box.createVerticalStrut(16));
+
+        this.lblStatusApiDetalhe = new JLabel(
+            "Cotação atual: US$ 1 = R$ " + this.cotacaoMoedaService.getUltimaCotacaoDolar() +
+            "  |  € 1 = R$ " + this.cotacaoMoedaService.getUltimaCotacaoEuro()
+        );
+        this.lblStatusApiDetalhe.setForeground(TEXTO_CLARO);
+        this.lblStatusApiDetalhe.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        this.lblStatusApiDetalhe.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cardApi.add(this.lblStatusApiDetalhe);
+        cardApi.add(Box.createVerticalStrut(12));
+
+        JButton btnConsultarApi = criarBotaoCiano("Consultar Cotação em Tempo Real (AwesomeAPI)");
+        btnConsultarApi.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnConsultarApi.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        btnConsultarApi.addActionListener(e -> acaoConsultarApiCotacao());
+        cardApi.add(btnConsultarApi);
+        cardApi.add(Box.createVerticalStrut(20));
+
+        cardApi.add(criarItemExplicacao(
+            "Endpoint Consumido (HttpClient)",
+            "GET https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL\nA classe CotacaoMoedaService realiza a requisição HTTP e converte automaticamente o saldo do usuário."
+        ));
+
+        grade.add(cardCsv);
+        grade.add(cardApi);
+
+        tela.add(grade, BorderLayout.CENTER);
+        return tela;
+    }
+
+    // ==================== AÇÕES E EVENTOS ====================
+
+    private void acaoSalvarLancamento() {
+        try {
+            String tipo = String.valueOf(this.cmbTipo.getSelectedItem());
+            String descricao = this.txtDescricao.getText().trim();
+            String valorTexto = this.txtValor.getText().trim().replace(",", ".");
+            String dataTexto = this.txtData.getText().trim();
+            Categoria categoria = (Categoria) this.cmbCategoria.getSelectedItem();
+
+            if (valorTexto.isEmpty()) {
+                throw new FinanceHubException("VALOR_VAZIO", "Informe o valor em reais.");
+            }
+
+            BigDecimal valor = new BigDecimal(valorTexto).setScale(2, RoundingMode.HALF_UP);
+            LocalDate data = LocalDate.parse(dataTexto);
+
+            if (this.idEmEdicao == null) {
+                Lancamento novo = "RECEITA".equalsIgnoreCase(tipo)
+                    ? new Receita(null, descricao, valor, data, categoria, this.usuarioAtual.getId())
+                    : new Despesa(null, descricao, valor, data, categoria, this.usuarioAtual.getId());
+                registrarNovoLancamentoInterno(novo);
+            } else {
+                this.gerenciadorLancamentos.atualizar(this.idEmEdicao, tipo, descricao, valor, data, categoria);
+                sincronizarLancamentosNoUsuario();
+            }
+
+            salvarAlteracoes();
+            limparFormularioLancamento();
+            atualizarTodasAsTelas(null, null);
+            navegarParaTela(TELA_PERIODO, this.btnMenuPeriodo);
+        } catch (FinanceHubException e) {
+            mostrarErro("Validação (" + e.getCodigo() + ")", e.getMessage());
+        } catch (Exception e) {
+            mostrarErro("Dados Inválidos", "Verifique o valor numérico e a data (AAAA-MM-DD).\nDetalhe: " + e.getMessage());
+        }
+    }
+
+    private void acaoCarregarLancamentoParaEdicao() {
+        int linha = this.tabelaPeriodo.getSelectedRow();
+        if (linha < 0) {
+            mostrarErro("Seleção Necessária", "Selecione uma linha na tabela para editar.");
+            return;
+        }
+        try {
+            long id = Long.parseLong(String.valueOf(this.modeloTabelaPeriodo.getValueAt(linha, 0)));
+            Lancamento l = this.gerenciadorLancamentos.buscarPorId(id);
+
+            this.idEmEdicao = l.getId();
+            this.lblTituloFormulario.setText("Editando Lançamento #" + l.getId());
+            this.cmbTipo.setSelectedItem(l.getTipo());
+            this.txtDescricao.setText(l.getDescricao());
+            this.txtValor.setText(l.getValor().toPlainString());
+            this.txtData.setText(l.getData().toString());
+            if (l.getCategoria() != null) {
+                this.cmbCategoria.setSelectedItem(l.getCategoria());
+            }
+            navegarParaTela(TELA_ADICIONAR, this.btnMenuAdicionar);
+        } catch (FinanceHubException e) {
+            mostrarErro("Erro ao Carregar", e.getMessage());
+        }
+    }
+
+    private void acaoDuplicarLancamentoSelecionado() {
+        int linha = this.tabelaPeriodo.getSelectedRow();
+        if (linha < 0) {
+            mostrarErro("Seleção Necessária", "Selecione um lançamento na tabela para duplicar.");
+            return;
+        }
+        try {
+            long id = Long.parseLong(String.valueOf(this.modeloTabelaPeriodo.getValueAt(linha, 0)));
+            Lancamento original = this.gerenciadorLancamentos.buscarPorId(id);
+
+            Lancamento copia = original.isReceita()
+                ? new Receita(null, original.getDescricao() + " (Cópia)", original.getValor(), LocalDate.now(), original.getCategoria(), this.usuarioAtual.getId())
+                : new Despesa(null, original.getDescricao() + " (Cópia)", original.getValor(), LocalDate.now(), original.getCategoria(), this.usuarioAtual.getId());
+
+            registrarNovoLancamentoInterno(copia);
+            salvarAlteracoes();
+            atualizarTodasAsTelas(null, null);
+        } catch (FinanceHubException e) {
+            mostrarErro("Erro ao Duplicar", e.getMessage());
+        }
+    }
+
+    private void limparFormularioLancamento() {
+        this.idEmEdicao = null;
+        if (this.lblTituloFormulario != null) {
+            this.lblTituloFormulario.setText("Adicionar Novo Lançamento Financeiro");
+        }
+        if (this.txtDescricao != null) {
+            this.txtDescricao.setText("");
+            this.txtValor.setText("");
+            this.txtData.setText(LocalDate.now().toString());
+        }
+    }
+
+    private void acaoAdicionarCategoria() {
+        try {
+            String nome = this.txtNovaCategoria.getText().trim();
+            long novoId = gerarProximoIdCategoria();
+            Categoria nova = new Categoria(novoId, nome);
+            this.gerenciadorCategorias.cadastrar(nova);
+            salvarAlteracoes();
+            this.txtNovaCategoria.setText("");
+            atualizarTodasAsTelas(null, null);
+        } catch (Exception e) {
+            mostrarErro("Erro na Categoria", e.getMessage());
+        }
+    }
+
+    private void acaoRemoverCategoria() {
+        int linha = this.tabelaCategorias.getSelectedRow();
+        if (linha < 0) {
+            mostrarErro("Seleção Necessária", "Selecione uma categoria na tabela para remover.");
+            return;
+        }
+        Categoria selecionada = this.gerenciadorCategorias.listar().get(linha);
+        if (!selecionada.getLancamentos().isEmpty()) {
+            mostrarErro(
+                "Categoria em Uso",
+                "A categoria '" + selecionada.getNome() + "' possui " + selecionada.getLancamentos().size() +
+                " lançamento(s) vinculado(s) e não pode ser removida."
+            );
+            return;
+        }
+        this.gerenciadorCategorias.removerPorId(selecionada.getId());
+        salvarAlteracoes();
+        atualizarTodasAsTelas(null, null);
+    }
+
+    private void acaoExcluirLancamentoSelecionado() {
+        int linha = this.tabelaPeriodo.getSelectedRow();
+        if (linha < 0) {
+            mostrarErro("Seleção Necessária", "Selecione um lançamento na tabela para excluir.");
+            return;
+        }
+        long id = Long.parseLong(String.valueOf(this.modeloTabelaPeriodo.getValueAt(linha, 0)));
+        if (this.gerenciadorLancamentos.removerPorId(id)) {
+            sincronizarLancamentosNoUsuario();
+            salvarAlteracoes();
+            atualizarTodasAsTelas(null, null);
+        }
+    }
+
+    private void acaoImportarTextoCsv() {
+        try {
+            String conteudo = this.txtAreaCsv.getText().trim();
+            ArrayList<Lancamento> importados = this.importadorArquivoService.importarDeConteudo(
+                conteudo,
+                this.gerenciadorLancamentos,
+                this.gerenciadorCategorias
+            );
+            sincronizarLancamentosNoUsuario();
+            salvarAlteracoes();
+            atualizarTodasAsTelas(null, null);
+            JOptionPane.showMessageDialog(this, importados.size() + " lançamento(s) importado(s) com sucesso!");
+            navegarParaTela(TELA_PERIODO, this.btnMenuPeriodo);
+        } catch (FinanceHubException e) {
+            mostrarErro("Erro na Importação (" + e.getCodigo() + ")", e.getMessage());
+        }
+    }
+
+    private void acaoImportarArquivoDisco() {
+        JFileChooser chooser = new JFileChooser(Path.of(".").toFile());
+        chooser.setFileFilter(new FileNameExtensionFilter("Arquivos CSV ou TXT", "csv", "txt"));
+        if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try {
+                Path arquivo = chooser.getSelectedFile().toPath();
+                ArrayList<Lancamento> importados = this.importadorArquivoService.importarDeArquivo(
+                    arquivo,
+                    this.gerenciadorLancamentos,
+                    this.gerenciadorCategorias
+                );
+                sincronizarLancamentosNoUsuario();
+                salvarAlteracoes();
+                atualizarTodasAsTelas(null, null);
+                JOptionPane.showMessageDialog(this, importados.size() + " lançamento(s) importado(s) de " + arquivo.getFileName());
+                navegarParaTela(TELA_PERIODO, this.btnMenuPeriodo);
+            } catch (FinanceHubException e) {
+                mostrarErro("Erro na Leitura do Arquivo", e.getMessage());
+            }
+        }
+    }
+
+    private void acaoExportarArquivoDisco() {
+        JFileChooser chooser = new JFileChooser(Path.of(".").toFile());
+        chooser.setSelectedFile(Path.of("financehub-lancamentos.csv").toFile());
+        if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try {
+                Path destino = chooser.getSelectedFile().toPath();
+                this.importadorArquivoService.exportarParaArquivo(destino, this.gerenciadorLancamentos.listar());
+                JOptionPane.showMessageDialog(this, "Exportado com sucesso para:\n" + destino.toAbsolutePath());
+            } catch (FinanceHubException e) {
+                mostrarErro("Erro na Exportação", e.getMessage());
+            }
+        }
+    }
+
+    private void acaoConsultarApiCotacao() {
+        BigDecimal usd = this.cotacaoMoedaService.buscarCotacaoDolarAtual();
+        BigDecimal eur = this.cotacaoMoedaService.getUltimaCotacaoEuro();
+        String origem = this.cotacaoMoedaService.isObtidaDaApiOnline() ? "AwesomeAPI Online" : "Valor Padrão Local";
+        this.lblStatusApiDetalhe.setText("Cotação atual (" + origem + "): US$ 1 = R$ " + usd + "  |  € 1 = R$ " + eur);
+        atualizarTodasAsTelas(null, null);
+        JOptionPane.showMessageDialog(this, "Cotações atualizadas!\nDólar: R$ " + usd + "\nEuro: R$ " + eur);
+    }
+
+    private void acaoEditarUsuarioEMeta() {
+        String novoNome = JOptionPane.showInputDialog(this, "Nome do Titular:", this.usuarioAtual.getNome());
+        if (novoNome != null && !novoNome.isBlank()) {
+            this.usuarioAtual.setNome(novoNome);
+        }
+        String novoEmail = JOptionPane.showInputDialog(this, "E-mail do Titular:", this.usuarioAtual.getEmail());
+        if (novoEmail != null && !novoEmail.isBlank()) {
+            this.usuarioAtual.setEmail(novoEmail);
+        }
+        String novaMeta = JOptionPane.showInputDialog(
+            this,
+            "Meta / Limite de Despesas Mensal (R$):",
+            this.usuarioAtual.getMetaDespesaMensal().toPlainString()
+        );
+        if (novaMeta != null && !novaMeta.isBlank()) {
+            try {
+                this.usuarioAtual.setMetaDespesaMensal(new BigDecimal(novaMeta.trim().replace(",", ".")).setScale(2, RoundingMode.HALF_UP));
+            } catch (Exception e) {
+                mostrarErro("Meta Inválida", "Informe um valor positivo.");
+            }
+        }
+        this.lblUsuarioSidebar.setText(this.usuarioAtual.getNome());
+        this.lblEmailSidebar.setText(this.usuarioAtual.getEmail());
+        atualizarTodasAsTelas(null, null);
+    }
+
+    private void acaoAplicarFiltros() {
+        try {
+            String ini = this.txtFiltroInicio.getText().trim();
+            String fim = this.txtFiltroFim.getText().trim();
+            LocalDate dataInicio = ini.isEmpty() ? null : LocalDate.parse(ini);
+            LocalDate dataFim = fim.isEmpty() ? null : LocalDate.parse(fim);
+            atualizarTodasAsTelas(dataInicio, dataFim);
+        } catch (Exception e) {
+            mostrarErro("Filtro Inválido", "Use o formato AAAA-MM-DD para as datas.");
+        }
+    }
+
+    // ==================== ATUALIZAÇÃO SINCRONIZADA DE TODAS AS TELAS ====================
+
+    private void atualizarTodasAsTelas(LocalDate inicio, LocalDate fim) {
+        try {
+            // 1. Atualizar Combo e Tabela de Categorias (Tela 2 e Tela 4)
+            Categoria selecionadaAntes = (Categoria) this.cmbCategoria.getSelectedItem();
+            this.modeloComboCategorias.removeAllElements();
+            this.modeloTabelaCategorias.setRowCount(0);
+
+            for (Categoria c : this.gerenciadorCategorias.listar()) {
+                this.modeloComboCategorias.addElement(c);
+                this.modeloTabelaCategorias.addRow(new Object[]{
+                    c.getId(),
+                    c.getNome(),
+                    c.getLancamentos().size() + " lançamento(s)",
+                    this.moedaBRL.format(c.calcularSaldo())
+                });
+            }
+            if (selecionadaAntes != null) {
+                this.cmbCategoria.setSelectedItem(selecionadaAntes);
+            }
+
+            // 2. Relatório Global para a Tela 1 (Início)
+            List<Lancamento> todos = this.gerenciadorLancamentos.listar();
+            Relatorio relGlobal = this.gerenciadorLancamentos.gerarRelatorio();
+
+            this.lblCardReceitas.setText(this.moedaBRL.format(relGlobal.getTotalReceitas()));
+            this.lblSubReceitas.setText(relGlobal.getQuantidadeReceitas() + " entrada(s)");
+
+            this.lblCardDespesas.setText(this.moedaBRL.format(relGlobal.getTotalDespesas()));
+            this.lblSubDespesas.setText(relGlobal.getQuantidadeDespesas() + " saída(s)");
+
+            this.lblCardSaldo.setText(this.moedaBRL.format(relGlobal.getSaldoTotal()));
+
+            int poupanca = 0;
+            if (relGlobal.getTotalReceitas().compareTo(BigDecimal.ZERO) > 0 && relGlobal.getSaldoTotal().compareTo(BigDecimal.ZERO) > 0) {
+                poupanca = relGlobal.getSaldoTotal().multiply(new BigDecimal("100")).divide(relGlobal.getTotalReceitas(), 0, RoundingMode.HALF_UP).intValue();
+            }
+            this.lblSubPoupanca.setText("Poupança: " + Math.min(100, Math.max(0, poupanca)) + "% das receitas");
+            this.barraPoupanca.setValue(Math.min(100, Math.max(0, poupanca)));
+
+            BigDecimal meta = this.usuarioAtual.getMetaDespesaMensal();
+            this.lblCardMeta.setText(this.moedaBRL.format(meta));
+            int percMeta = meta.compareTo(BigDecimal.ZERO) > 0
+                ? relGlobal.getTotalDespesas().multiply(new BigDecimal("100")).divide(meta, 0, RoundingMode.HALF_UP).intValue()
+                : 0;
+            this.lblSubMeta.setText(percMeta + "% da meta utilizada");
+            this.barraMeta.setValue(Math.min(100, percMeta));
+            this.barraMeta.setForeground(percMeta > 100 ? CORAL_DESPESA : (percMeta >= 80 ? AMBAR_ALERTA : VERDE_RECEITA));
+
+            BigDecimal usd = this.cotacaoMoedaService.converterReaisParaDolar(relGlobal.getSaldoTotal());
+            BigDecimal eur = this.cotacaoMoedaService.converterReaisParaEuro(relGlobal.getSaldoTotal());
+            this.lblCardCambio.setText(this.moedaUSD.format(usd));
+            this.lblSubCambio.setText(String.format("Euro: € %.2f", eur));
+
+            BigDecimal somaMov = relGlobal.getTotalReceitas().add(relGlobal.getTotalDespesas());
+            if (somaMov.compareTo(BigDecimal.ZERO) > 0) {
+                int percRec = relGlobal.getTotalReceitas().multiply(new BigDecimal("100")).divide(somaMov, 0, RoundingMode.HALF_UP).intValue();
+                this.barraReceitas.setValue(percRec);
+                this.barraDespesas.setValue(100 - percRec);
+            } else {
+                this.barraReceitas.setValue(0);
+                this.barraDespesas.setValue(0);
+            }
+
+            // Popular Últimos Lançamentos e Insights na Tela 1 (Início)
+            this.modeloTabelaRecentes.setRowCount(0);
+            int limiteRecentes = Math.min(8, todos.size());
+            for (int i = todos.size() - 1; i >= todos.size() - limiteRecentes; i--) {
+                Lancamento l = todos.get(i);
+                String catNome = l.getCategoria() != null ? l.getCategoria().getNome() : "Geral";
+                this.modeloTabelaRecentes.addRow(new Object[]{
+                    l.getData().toString(),
+                    l.getTipo(),
+                    l.getResumo(),
+                    catNome,
+                    this.moedaBRL.format(l.calcularImpacto())
+                });
+            }
+            atualizarGraficoEInsightsInicio(todos, relGlobal);
+
+            // 3. Atualizar Tela 3 (Extrato e Período Filtrado)
+            List<Lancamento> basePeriodo = (inicio != null && fim != null)
+                ? this.gerenciadorLancamentos.listarPorPeriodo(inicio, fim)
+                : todos;
+
+            String termo = this.txtBuscaDescricao != null ? this.txtBuscaDescricao.getText().trim().toLowerCase() : "";
+            String tipoFiltro = this.cmbFiltroTipo != null ? String.valueOf(this.cmbFiltroTipo.getSelectedItem()) : "TODOS";
+
+            List<Lancamento> filtrados = new ArrayList<>();
+            for (Lancamento l : basePeriodo) {
+                boolean okTexto = termo.isEmpty() || l.getDescricao().toLowerCase().contains(termo);
+                boolean okTipo = "TODOS".equalsIgnoreCase(tipoFiltro) || l.getTipo().equalsIgnoreCase(tipoFiltro);
+                if (okTexto && okTipo) {
+                    filtrados.add(l);
+                }
+            }
+
+            Relatorio relPeriodo = GerenciadorLancamentos.calcularRelatorio(filtrados);
+            this.lblPeriodoReceitas.setText(this.moedaBRL.format(relPeriodo.getTotalReceitas()));
+            this.lblPeriodoDespesas.setText(this.moedaBRL.format(relPeriodo.getTotalDespesas()));
+            this.lblPeriodoSaldo.setText(this.moedaBRL.format(relPeriodo.getSaldoTotal()));
+            this.lblResumoPeriodoTexto.setText(relPeriodo.gerarResumoTexto());
+
+            this.modeloTabelaPeriodo.setRowCount(0);
+            for (Lancamento l : filtrados) {
+                String catNome = l.getCategoria() != null ? l.getCategoria().getNome() : "Geral";
+                this.modeloTabelaPeriodo.addRow(new Object[]{
+                    l.getId(),
+                    l.getData().toString(),
+                    l.getTipo(),
+                    l.getResumo(),
+                    catNome,
+                    this.moedaBRL.format(l.calcularImpacto())
+                });
+            }
+        } catch (FinanceHubException e) {
+            mostrarErro("Erro no Filtro de Período", e.getMessage());
+        }
+    }
+
+    private void atualizarGraficoEInsightsInicio(List<Lancamento> lista, Relatorio relatorio) {
+        this.painelBarrasCategoriasInicio.removeAll();
+        BigDecimal maiorModulo = BigDecimal.ONE;
+        for (Categoria c : this.gerenciadorCategorias.listar()) {
+            BigDecimal abs = c.calcularSaldo().abs();
+            if (abs.compareTo(maiorModulo) > 0) {
+                maiorModulo = abs;
+            }
+        }
+
+        for (Categoria c : this.gerenciadorCategorias.listar()) {
+            BigDecimal saldoCat = c.calcularSaldo();
+            int perc = saldoCat.abs().multiply(new BigDecimal("100")).divide(maiorModulo, 0, RoundingMode.HALF_UP).intValue();
+
+            JPanel linha = new JPanel(new BorderLayout(10, 0));
+            linha.setOpaque(false);
+            linha.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            linha.setBorder(new EmptyBorder(3, 0, 4, 4));
+
+            JLabel lblNome = new JLabel(c.getNome() + " (" + c.getLancamentos().size() + ")");
+            lblNome.setPreferredSize(new Dimension(130, 22));
+            lblNome.setForeground(TEXTO_CLARO);
+            lblNome.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+            JProgressBar barra = new JProgressBar(0, 100);
+            barra.setValue(perc);
+            barra.setBackground(BG_CAMPO);
+            barra.setForeground(saldoCat.compareTo(BigDecimal.ZERO) >= 0 ? VERDE_RECEITA : CORAL_DESPESA);
+            barra.setBorderPainted(false);
+
+            JLabel lblSaldo = new JLabel(this.moedaBRL.format(saldoCat), SwingConstants.RIGHT);
+            lblSaldo.setPreferredSize(new Dimension(115, 22));
+            lblSaldo.setForeground(saldoCat.compareTo(BigDecimal.ZERO) >= 0 ? VERDE_RECEITA : CORAL_DESPESA);
+            lblSaldo.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+            linha.add(lblNome, BorderLayout.WEST);
+            linha.add(barra, BorderLayout.CENTER);
+            linha.add(lblSaldo, BorderLayout.EAST);
+            this.painelBarrasCategoriasInicio.add(linha);
+        }
+        this.painelBarrasCategoriasInicio.revalidate();
+        this.painelBarrasCategoriasInicio.repaint();
+
+        Lancamento maiorRec = null;
+        Lancamento maiorDesp = null;
+        BigDecimal soma = BigDecimal.ZERO;
+
+        for (Lancamento l : lista) {
+            soma = soma.add(l.getValor());
+            if (l.isReceita()) {
+                if (maiorRec == null || l.getValor().compareTo(maiorRec.getValor()) > 0) {
+                    maiorRec = l;
+                }
+            } else {
+                if (maiorDesp == null || l.getValor().compareTo(maiorDesp.getValor()) > 0) {
+                    maiorDesp = l;
+                }
+            }
+        }
+
+        this.lblInsightMaiorReceita.setText(maiorRec != null ? maiorRec.getDescricao() + " (" + this.moedaBRL.format(maiorRec.getValor()) + ")" : "Nenhuma");
+        this.lblInsightMaiorDespesa.setText(maiorDesp != null ? maiorDesp.getDescricao() + " (" + this.moedaBRL.format(maiorDesp.getValor()) + ")" : "Nenhuma");
+        this.lblInsightTicketMedio.setText(!lista.isEmpty() ? this.moedaBRL.format(soma.divide(BigDecimal.valueOf(lista.size()), 2, RoundingMode.HALF_UP)) : "R$ 0,00");
+
+        if (relatorio.getSaldoTotal().compareTo(BigDecimal.ZERO) < 0) {
+            this.lblInsightStatusOrcamento.setText("Déficit — Gastos maiores que ganhos");
+            this.lblInsightStatusOrcamento.setForeground(CORAL_DESPESA);
+        } else if (relatorio.getTotalDespesas().compareTo(this.usuarioAtual.getMetaDespesaMensal()) > 0) {
+            this.lblInsightStatusOrcamento.setText("Alerta — Acima da meta mensal");
+            this.lblInsightStatusOrcamento.setForeground(AMBAR_ALERTA);
+        } else {
+            this.lblInsightStatusOrcamento.setText("Saudável — Dentro da meta");
+            this.lblInsightStatusOrcamento.setForeground(VERDE_RECEITA);
+        }
+    }
+
+    private void sincronizarLancamentosNoUsuario() {
+        this.usuarioAtual.limparLancamentos();
+        for (Lancamento l : this.gerenciadorLancamentos.listar()) {
+            this.usuarioAtual.adicionarLancamento(l);
+        }
+    }
+
+    private long gerarProximoIdCategoria() {
+        long max = 0L;
+        for (Categoria c : this.gerenciadorCategorias.listar()) {
+            if (c.getId() > max) {
+                max = c.getId();
+            }
+        }
+        return max + 1L;
+    }
+
+    // ==================== FÁBRICAS VISUAIS AUXILIARES ====================
+
+    private JPanel criarCardPadrao(String titulo) {
+        JPanel card = new JPanel(new BorderLayout(0, 10));
+        card.setBackground(CARD_CINZA);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(BORDA_CINZA, 1, true),
+            new EmptyBorder(14, 16, 14, 16)
+        ));
+
+        JLabel lbl = new JLabel(titulo);
+        lbl.setForeground(CIANO_VIVO);
+        lbl.setFont(FONTE_SECAO);
+        card.add(criarBlocoTituloComBarraCiano(lbl), BorderLayout.NORTH);
+        return card;
+    }
+
+    private JTable criarTabelaEstilizada(DefaultTableModel modelo, int colTipo, int colValorDireita) {
+        JTable tabela = new JTable(modelo);
+        tabela.setBackground(BG_CAMPO);
+        tabela.setForeground(TEXTO_CLARO);
+        tabela.setGridColor(BORDA_CINZA);
+        tabela.setRowHeight(32);
+        tabela.setFont(FONTE_TEXTO);
+        tabela.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tabela.setFillsViewportHeight(true);
+
+        JTableHeader header = tabela.getTableHeader();
+        header.setBackground(CARD_CINZA_CLARO);
+        header.setForeground(CIANO_VIVO);
+        header.setFont(FONTE_ROTULO);
+        header.setPreferredSize(new Dimension(100, 34));
+
+        DefaultTableCellRenderer renderizador = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                String textoValor = String.valueOf(value);
+                boolean negativo = textoValor.startsWith("-");
+                String tipoLinha = colTipo >= 0 ? String.valueOf(table.getModel().getValueAt(row, colTipo)) : (negativo ? "DESPESA" : "RECEITA");
+
+                if (isSelected) {
+                    c.setBackground(CARD_CINZA_CLARO);
+                    c.setForeground(CIANO_VIVO);
+                } else {
+                    c.setBackground(row % 2 == 0 ? BG_CAMPO : CARD_CINZA);
+                    if (column == colTipo || column == colValorDireita) {
+                        c.setForeground("RECEITA".equalsIgnoreCase(tipoLinha) && !negativo ? VERDE_RECEITA : CORAL_DESPESA);
+                        setFont(new Font("Segoe UI", Font.BOLD, 13));
+                    } else {
+                        c.setForeground(TEXTO_CLARO);
+                        setFont(FONTE_TEXTO);
+                    }
+                }
+                setHorizontalAlignment(column == colValorDireita ? SwingConstants.RIGHT : SwingConstants.LEFT);
+                setBorder(new EmptyBorder(0, 10, 0, 10));
+                return c;
+            }
+        };
+
+        for (int i = 0; i < tabela.getColumnCount(); i++) {
+            tabela.getColumnModel().getColumn(i).setCellRenderer(renderizador);
+        }
+        return tabela;
     }
 
     private JProgressBar criarBarraProgresso(Color cor) {
@@ -406,7 +1668,7 @@ public class FinanceHubSwingFrame extends JFrame {
 
         lblValor.setForeground(corDestaque);
         lblValor.setFont(FONTE_VALOR_CARD);
-        lblValor.setBorder(new EmptyBorder(5, 0, 5, 0));
+        lblValor.setBorder(new EmptyBorder(4, 0, 4, 0));
         lblValor.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         lblDetalhe.setForeground(TEXTO_CINZA);
@@ -421,512 +1683,6 @@ public class FinanceHubSwingFrame extends JFrame {
             card.add(barra);
         }
         return card;
-    }
-
-    private JPanel criarAreaTrabalhoCentral() {
-        JPanel painel = new JPanel(new BorderLayout(16, 0));
-        painel.setOpaque(false);
-
-        painel.add(criarColunaEsquerdaComAbasCustomizadas(), BorderLayout.WEST);
-        painel.add(criarColunaDireitaCompleta(), BorderLayout.CENTER);
-        return painel;
-    }
-
-    private JPanel criarColunaEsquerdaComAbasCustomizadas() {
-        JPanel containerEsquerda = new JPanel(new BorderLayout(0, 10));
-        containerEsquerda.setPreferredSize(new Dimension(385, 560));
-        containerEsquerda.setBackground(CARD_CINZA);
-        containerEsquerda.setBorder(new LineBorder(BORDA_CINZA, 1, true));
-
-        // Barra de botões de navegação (substitui JTabbedPane sem bordas brancas)
-        JPanel barraNavegacao = new JPanel(new GridLayout(1, 3, 6, 0));
-        barraNavegacao.setBackground(BG_CAMPO);
-        barraNavegacao.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDA_CINZA),
-            new EmptyBorder(8, 8, 8, 8)
-        ));
-
-        this.btnAbaLancamento = criarBotaoAba("1. Lançamento", true);
-        this.btnAbaCategorias = criarBotaoAba("2. Categorias", false);
-        this.btnAbaImportar = criarBotaoAba("3. Lote CSV", false);
-
-        this.btnAbaLancamento.addActionListener(e -> alternarAbaLateral("ABA_LANCAMENTO", this.btnAbaLancamento));
-        this.btnAbaCategorias.addActionListener(e -> alternarAbaLateral("ABA_CATEGORIAS", this.btnAbaCategorias));
-        this.btnAbaImportar.addActionListener(e -> alternarAbaLateral("ABA_IMPORTAR", this.btnAbaImportar));
-
-        barraNavegacao.add(this.btnAbaLancamento);
-        barraNavegacao.add(this.btnAbaCategorias);
-        barraNavegacao.add(this.btnAbaImportar);
-
-        this.cardLayoutLateral = new CardLayout();
-        this.painelConteudoLateral = new JPanel(this.cardLayoutLateral);
-        this.painelConteudoLateral.setBackground(CARD_CINZA);
-
-        this.painelConteudoLateral.add(criarAbaFormularioLancamento(), "ABA_LANCAMENTO");
-        this.painelConteudoLateral.add(criarAbaCategorias(), "ABA_CATEGORIAS");
-        this.painelConteudoLateral.add(criarAbaImportacaoCsv(), "ABA_IMPORTAR");
-
-        containerEsquerda.add(barraNavegacao, BorderLayout.NORTH);
-        containerEsquerda.add(this.painelConteudoLateral, BorderLayout.CENTER);
-        return containerEsquerda;
-    }
-
-    private JButton criarBotaoAba(String texto, boolean ativo) {
-        JButton btn = new JButton(texto);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btn.setFocusPainted(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        aplicarEstiloBotaoAba(btn, ativo);
-        return btn;
-    }
-
-    private void aplicarEstiloBotaoAba(JButton btn, boolean ativo) {
-        if (ativo) {
-            btn.setBackground(CIANO_VIVO);
-            btn.setForeground(BG_PRETO);
-            btn.setBorder(new EmptyBorder(8, 6, 8, 6));
-        } else {
-            btn.setBackground(CARD_CINZA_CLARO);
-            btn.setForeground(TEXTO_CINZA);
-            btn.setBorder(new LineBorder(BORDA_CINZA, 1));
-        }
-    }
-
-    private void alternarAbaLateral(String nomeCard, JButton botaoAtivo) {
-        this.cardLayoutLateral.show(this.painelConteudoLateral, nomeCard);
-        aplicarEstiloBotaoAba(this.btnAbaLancamento, botaoAtivo == this.btnAbaLancamento);
-        aplicarEstiloBotaoAba(this.btnAbaCategorias, botaoAtivo == this.btnAbaCategorias);
-        aplicarEstiloBotaoAba(this.btnAbaImportar, botaoAtivo == this.btnAbaImportar);
-    }
-
-    private JPanel criarAbaFormularioLancamento() {
-        JPanel card = criarPainelInternoAba();
-
-        this.lblModoFormulario = new JLabel("Cadastrar Novo Lançamento");
-        this.lblModoFormulario.setForeground(CIANO_VIVO);
-        this.lblModoFormulario.setFont(FONTE_SECAO);
-        card.add(criarBlocoTituloComBarraCiano(this.lblModoFormulario));
-        card.add(Box.createVerticalStrut(14));
-
-        this.cmbTipo = new JComboBox<>(new String[]{"RECEITA", "DESPESA"});
-        estilizarCombo(this.cmbTipo);
-
-        this.txtDescricao = criarCampoTexto("");
-        this.txtValor = criarCampoTexto("250.00");
-        this.txtData = criarCampoTexto(LocalDate.now().toString());
-
-        this.cmbCategoria = new JComboBox<>(this.modeloComboCategorias);
-        estilizarCombo(this.cmbCategoria);
-        this.cmbCategoria.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                JLabel lbl = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof Categoria c) {
-                    lbl.setText(c.getId() + " - " + c.getNome());
-                }
-                lbl.setBackground(isSelected ? CIANO_ESCURO : BG_CAMPO);
-                lbl.setForeground(isSelected ? BG_PRETO : TEXTO_CLARO);
-                lbl.setBorder(new EmptyBorder(6, 10, 6, 10));
-                return lbl;
-            }
-        });
-
-        card.add(criarRotulo("TIPO DE MOVIMENTAÇÃO"));
-        card.add(this.cmbTipo);
-        card.add(Box.createVerticalStrut(12));
-
-        card.add(criarRotulo("DESCRIÇÃO DO LANÇAMENTO"));
-        card.add(this.txtDescricao);
-        card.add(Box.createVerticalStrut(12));
-
-        card.add(criarRotulo("VALOR EM REAIS (R$)"));
-        card.add(this.txtValor);
-        card.add(Box.createVerticalStrut(12));
-
-        card.add(criarRotulo("DATA (AAAA-MM-DD)"));
-        card.add(this.txtData);
-        card.add(Box.createVerticalStrut(12));
-
-        card.add(criarRotulo("CATEGORIA ASSOCIADA"));
-        card.add(this.cmbCategoria);
-        card.add(Box.createVerticalStrut(18));
-
-        JButton btnSalvar = criarBotaoCiano("Salvar Lançamento");
-        btnSalvar.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnSalvar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        btnSalvar.addActionListener(e -> acaoSalvarLancamento());
-        card.add(btnSalvar);
-
-        card.add(Box.createVerticalStrut(8));
-
-        JButton btnCancelarEdicao = criarBotaoSecundario("Limpar / Cancelar Edição");
-        btnCancelarEdicao.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnCancelarEdicao.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        btnCancelarEdicao.addActionListener(e -> limparFormularioLancamento());
-        card.add(btnCancelarEdicao);
-
-        card.add(Box.createVerticalStrut(14));
-        JLabel dicaDuploClique = new JLabel("Dica: Dê duplo clique em uma linha da tabela para editar.");
-        dicaDuploClique.setForeground(TEXTO_CINZA);
-        dicaDuploClique.setFont(new Font("Segoe UI", Font.ITALIC, 11));
-        dicaDuploClique.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(dicaDuploClique);
-
-        return card;
-    }
-
-    private JPanel criarAbaCategorias() {
-        JPanel card = criarPainelInternoAba();
-
-        JLabel titulo = new JLabel("Gerenciar Categorias e Saldos");
-        titulo.setForeground(CIANO_VIVO);
-        titulo.setFont(FONTE_SECAO);
-        card.add(criarBlocoTituloComBarraCiano(titulo));
-        card.add(Box.createVerticalStrut(14));
-
-        card.add(criarRotulo("NOME DA NOVA CATEGORIA"));
-        this.txtNovaCategoria = criarCampoTexto("");
-        card.add(this.txtNovaCategoria);
-        card.add(Box.createVerticalStrut(8));
-
-        JButton btnAdicionar = criarBotaoCiano("Cadastrar Categoria");
-        btnAdicionar.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnAdicionar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        btnAdicionar.addActionListener(e -> acaoAdicionarCategoria());
-        card.add(btnAdicionar);
-        card.add(Box.createVerticalStrut(16));
-
-        card.add(criarRotulo("CATEGORIAS E SALDO INDIVIDUAL (POLIMÓRFICO)"));
-        this.lstCategorias = new JList<>(this.modeloListaCategorias);
-        this.lstCategorias.setBackground(BG_CAMPO);
-        this.lstCategorias.setForeground(TEXTO_CLARO);
-        this.lstCategorias.setSelectionBackground(CIANO_ESCURO);
-        this.lstCategorias.setSelectionForeground(BG_PRETO);
-        this.lstCategorias.setFont(FONTE_TEXTO);
-        this.lstCategorias.setFixedCellHeight(28);
-
-        JScrollPane scroll = new JScrollPane(this.lstCategorias);
-        scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
-        scroll.setBorder(new LineBorder(BORDA_CINZA, 1));
-        card.add(scroll);
-        card.add(Box.createVerticalStrut(10));
-
-        JButton btnRemover = criarBotaoPerigo("Remover Categoria Selecionada");
-        btnRemover.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnRemover.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        btnRemover.addActionListener(e -> acaoRemoverCategoria());
-        card.add(btnRemover);
-
-        return card;
-    }
-
-    private JPanel criarAbaImportacaoCsv() {
-        JPanel card = criarPainelInternoAba();
-
-        JLabel titulo = new JLabel("Importar Lote CSV ou TXT");
-        titulo.setForeground(CIANO_VIVO);
-        titulo.setFont(FONTE_SECAO);
-        card.add(criarBlocoTituloComBarraCiano(titulo));
-        card.add(Box.createVerticalStrut(12));
-
-        JLabel instrucao = new JLabel("Padrão: TIPO;DESCRICAO;VALOR;DATA;CATEGORIA");
-        instrucao.setForeground(TEXTO_CINZA);
-        instrucao.setFont(FONTE_ROTULO);
-        instrucao.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(instrucao);
-        card.add(Box.createVerticalStrut(8));
-
-        this.txtAreaCsv = new JTextArea(11, 25);
-        this.txtAreaCsv.setBackground(BG_CAMPO);
-        this.txtAreaCsv.setForeground(TEXTO_CLARO);
-        this.txtAreaCsv.setCaretColor(CIANO_VIVO);
-        this.txtAreaCsv.setFont(new Font("Consolas", Font.PLAIN, 12));
-        this.txtAreaCsv.setText(
-            "RECEITA;Freelance Java;950.00;" + LocalDate.now() + ";Trabalho\n" +
-            "DESPESA;Livros POO;140.00;" + LocalDate.now() + ";Trabalho"
-        );
-
-        JScrollPane scroll = new JScrollPane(this.txtAreaCsv);
-        scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
-        scroll.setBorder(new LineBorder(BORDA_CINZA, 1));
-        card.add(scroll);
-        card.add(Box.createVerticalStrut(12));
-
-        JButton btnImportarTexto = criarBotaoCiano("Processar e Importar Linhas");
-        btnImportarTexto.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnImportarTexto.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        btnImportarTexto.addActionListener(e -> acaoImportarTextoCsv());
-        card.add(btnImportarTexto);
-
-        return card;
-    }
-
-    private JPanel criarColunaDireitaCompleta() {
-        JPanel colunaDireita = new JPanel(new BorderLayout(0, 14));
-        colunaDireita.setOpaque(false);
-
-        colunaDireita.add(criarPainelTabelaSuperior(), BorderLayout.CENTER);
-        colunaDireita.add(criarPainelInferiorAnalitico(), BorderLayout.SOUTH);
-        return colunaDireita;
-    }
-
-    private JPanel criarPainelTabelaSuperior() {
-        JPanel painel = new JPanel(new BorderLayout(0, 10));
-        painel.setBackground(CARD_CINZA);
-        painel.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDA_CINZA, 1, true),
-            new EmptyBorder(14, 18, 14, 18)
-        ));
-
-        // Topo com título, atalhos rápidos e filtros
-        JPanel topo = new JPanel(new BorderLayout(8, 8));
-        topo.setOpaque(false);
-
-        JPanel linhaTituloEAtalhos = new JPanel(new BorderLayout());
-        linhaTituloEAtalhos.setOpaque(false);
-
-        JPanel titulos = new JPanel();
-        titulos.setLayout(new BoxLayout(titulos, BoxLayout.Y_AXIS));
-        titulos.setOpaque(false);
-
-        JLabel lblHist = new JLabel("Histórico de Movimentações Financeiras");
-        lblHist.setForeground(CIANO_VIVO);
-        lblHist.setFont(FONTE_SECAO);
-
-        this.lblResumoGeral = new JLabel("Resumo consolidado");
-        this.lblResumoGeral.setForeground(TEXTO_CINZA);
-        this.lblResumoGeral.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-
-        titulos.add(criarBlocoTituloComBarraCiano(lblHist));
-        titulos.add(Box.createVerticalStrut(3));
-        titulos.add(this.lblResumoGeral);
-
-        JPanel atalhosRapidos = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        atalhosRapidos.setOpaque(false);
-
-        JButton btnRapidoMesAtual = criarBotaoSecundario("Mês Atual");
-        btnRapidoMesAtual.addActionListener(e -> {
-            LocalDate hoje = LocalDate.now();
-            this.txtFiltroInicio.setText(hoje.withDayOfMonth(1).toString());
-            this.txtFiltroFim.setText(hoje.withDayOfMonth(hoje.lengthOfMonth()).toString());
-            acaoAplicarFiltros();
-        });
-
-        JButton btnRapidoReceitas = criarBotaoSecundario("Só Receitas");
-        btnRapidoReceitas.addActionListener(e -> {
-            this.cmbFiltroTipo.setSelectedItem("RECEITA");
-            acaoAplicarFiltros();
-        });
-
-        JButton btnRapidoDespesas = criarBotaoSecundario("Só Despesas");
-        btnRapidoDespesas.addActionListener(e -> {
-            this.cmbFiltroTipo.setSelectedItem("DESPESA");
-            acaoAplicarFiltros();
-        });
-
-        atalhosRapidos.add(btnRapidoMesAtual);
-        atalhosRapidos.add(btnRapidoReceitas);
-        atalhosRapidos.add(btnRapidoDespesas);
-
-        linhaTituloEAtalhos.add(titulos, BorderLayout.WEST);
-        linhaTituloEAtalhos.add(atalhosRapidos, BorderLayout.EAST);
-
-        JPanel barraFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
-        barraFiltros.setOpaque(false);
-
-        this.txtBuscaDescricao = criarCampoTexto("");
-        this.txtBuscaDescricao.setPreferredSize(new Dimension(150, 32));
-
-        this.cmbFiltroTipo = new JComboBox<>(new String[]{"TODOS", "RECEITA", "DESPESA"});
-        estilizarCombo(this.cmbFiltroTipo);
-        this.cmbFiltroTipo.setPreferredSize(new Dimension(115, 32));
-
-        this.txtFiltroInicio = criarCampoTexto("");
-        this.txtFiltroInicio.setPreferredSize(new Dimension(100, 32));
-
-        this.txtFiltroFim = criarCampoTexto("");
-        this.txtFiltroFim.setPreferredSize(new Dimension(100, 32));
-
-        JButton btnAplicarFiltro = criarBotaoCiano("Filtrar");
-        btnAplicarFiltro.addActionListener(e -> acaoAplicarFiltros());
-
-        JButton btnLimparFiltro = criarBotaoSecundario("Limpar Tudo");
-        btnLimparFiltro.addActionListener(e -> {
-            this.txtBuscaDescricao.setText("");
-            this.cmbFiltroTipo.setSelectedIndex(0);
-            this.txtFiltroInicio.setText("");
-            this.txtFiltroFim.setText("");
-            atualizarInterface(null, null);
-        });
-
-        barraFiltros.add(criarRotuloInline("Buscar:"));
-        barraFiltros.add(this.txtBuscaDescricao);
-        barraFiltros.add(criarRotuloInline("Tipo:"));
-        barraFiltros.add(this.cmbFiltroTipo);
-        barraFiltros.add(criarRotuloInline("De:"));
-        barraFiltros.add(this.txtFiltroInicio);
-        barraFiltros.add(criarRotuloInline("Até:"));
-        barraFiltros.add(this.txtFiltroFim);
-        barraFiltros.add(btnAplicarFiltro);
-        barraFiltros.add(btnLimparFiltro);
-
-        topo.add(linhaTituloEAtalhos, BorderLayout.NORTH);
-        topo.add(barraFiltros, BorderLayout.SOUTH);
-
-        // Tabela de lançamentos
-        String[] colunas = {"ID", "Data", "Tipo", "Resumo (Sobrescrita getResumo)", "Categoria", "Impacto (calcularImpacto)"};
-        this.modeloTabela = new DefaultTableModel(colunas, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-
-        this.tabelaLancamentos = new JTable(this.modeloTabela);
-        this.tabelaLancamentos.setBackground(BG_CAMPO);
-        this.tabelaLancamentos.setForeground(TEXTO_CLARO);
-        this.tabelaLancamentos.setGridColor(BORDA_CINZA);
-        this.tabelaLancamentos.setRowHeight(32);
-        this.tabelaLancamentos.setFont(FONTE_TEXTO);
-        this.tabelaLancamentos.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        this.tabelaLancamentos.setFillsViewportHeight(true);
-
-        // Duplo clique carrega para edição
-        this.tabelaLancamentos.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2 && tabelaLancamentos.getSelectedRow() >= 0) {
-                    acaoCarregarLancamentoParaEdicao();
-                }
-            }
-        });
-
-        JTableHeader header = this.tabelaLancamentos.getTableHeader();
-        header.setBackground(CARD_CINZA_CLARO);
-        header.setForeground(CIANO_VIVO);
-        header.setFont(FONTE_ROTULO);
-        header.setPreferredSize(new Dimension(100, 34));
-
-        this.tabelaLancamentos.getColumnModel().getColumn(0).setPreferredWidth(45);
-        this.tabelaLancamentos.getColumnModel().getColumn(1).setPreferredWidth(95);
-        this.tabelaLancamentos.getColumnModel().getColumn(2).setPreferredWidth(85);
-        this.tabelaLancamentos.getColumnModel().getColumn(3).setPreferredWidth(260);
-        this.tabelaLancamentos.getColumnModel().getColumn(4).setPreferredWidth(120);
-        this.tabelaLancamentos.getColumnModel().getColumn(5).setPreferredWidth(140);
-
-        DefaultTableCellRenderer renderizador = new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                String tipoLinha = String.valueOf(table.getModel().getValueAt(row, 2));
-                if (isSelected) {
-                    c.setBackground(CARD_CINZA_CLARO);
-                    c.setForeground(CIANO_VIVO);
-                } else {
-                    c.setBackground(row % 2 == 0 ? BG_CAMPO : CARD_CINZA);
-                    if (column == 2 || column == 5) {
-                        c.setForeground("RECEITA".equalsIgnoreCase(tipoLinha) ? VERDE_RECEITA : CORAL_DESPESA);
-                        setFont(new Font("Segoe UI", Font.BOLD, 13));
-                    } else {
-                        c.setForeground(TEXTO_CLARO);
-                        setFont(FONTE_TEXTO);
-                    }
-                }
-                setHorizontalAlignment(column == 5 ? SwingConstants.RIGHT : SwingConstants.LEFT);
-                setBorder(new EmptyBorder(0, 10, 0, 10));
-                return c;
-            }
-        };
-
-        for (int i = 0; i < this.tabelaLancamentos.getColumnCount(); i++) {
-            this.tabelaLancamentos.getColumnModel().getColumn(i).setCellRenderer(renderizador);
-        }
-
-        JScrollPane scrollTabela = new JScrollPane(this.tabelaLancamentos);
-        scrollTabela.getViewport().setBackground(BG_CAMPO);
-        scrollTabela.setBorder(new LineBorder(BORDA_CINZA, 1));
-
-        // Rodapé com botões de Duplicar, Editar e Excluir
-        JPanel rodape = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        rodape.setOpaque(false);
-
-        JButton btnDuplicar = criarBotaoSecundario("Duplicar Selecionado");
-        btnDuplicar.addActionListener(e -> acaoDuplicarLancamentoSelecionado());
-
-        JButton btnEditar = criarBotaoSecundario("Editar Selecionado");
-        btnEditar.addActionListener(e -> acaoCarregarLancamentoParaEdicao());
-
-        JButton btnExcluir = criarBotaoPerigo("Excluir Selecionado");
-        btnExcluir.addActionListener(e -> acaoExcluirLancamentoSelecionado());
-
-        rodape.add(btnDuplicar);
-        rodape.add(btnEditar);
-        rodape.add(btnExcluir);
-
-        painel.add(topo, BorderLayout.NORTH);
-        painel.add(scrollTabela, BorderLayout.CENTER);
-        painel.add(rodape, BorderLayout.SOUTH);
-        return painel;
-    }
-
-    private JPanel criarPainelInferiorAnalitico() {
-        JPanel painelAnalitico = new JPanel(new GridLayout(1, 2, 14, 0));
-        painelAnalitico.setOpaque(false);
-        painelAnalitico.setPreferredSize(new Dimension(100, 195));
-
-        // Card Esquerdo: Gráfico de Barras por Categoria
-        JPanel cardGraficoCat = new JPanel(new BorderLayout(0, 8));
-        cardGraficoCat.setBackground(CARD_CINZA);
-        cardGraficoCat.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDA_CINZA, 1, true),
-            new EmptyBorder(12, 16, 12, 16)
-        ));
-
-        JLabel lblTitCat = new JLabel("Distribuição e Saldo por Categoria (Polimorfismo)");
-        lblTitCat.setForeground(CIANO_VIVO);
-        lblTitCat.setFont(FONTE_SECAO);
-        cardGraficoCat.add(criarBlocoTituloComBarraCiano(lblTitCat), BorderLayout.NORTH);
-
-        this.painelBarrasCategorias = new JPanel();
-        this.painelBarrasCategorias.setLayout(new BoxLayout(this.painelBarrasCategorias, BoxLayout.Y_AXIS));
-        this.painelBarrasCategorias.setBackground(CARD_CINZA);
-
-        JScrollPane scrollBarras = new JScrollPane(this.painelBarrasCategorias);
-        scrollBarras.setBorder(null);
-        scrollBarras.getViewport().setBackground(CARD_CINZA);
-        cardGraficoCat.add(scrollBarras, BorderLayout.CENTER);
-
-        // Card Direito: Indicadores e Insights Automáticos
-        JPanel cardInsights = new JPanel(new BorderLayout(0, 8));
-        cardInsights.setBackground(CARD_CINZA);
-        cardInsights.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDA_CINZA, 1, true),
-            new EmptyBorder(12, 16, 12, 16)
-        ));
-
-        JLabel lblTitInsights = new JLabel("Indicadores e Diagnóstico do Período");
-        lblTitInsights.setForeground(CIANO_VIVO);
-        lblTitInsights.setFont(FONTE_SECAO);
-        cardInsights.add(criarBlocoTituloComBarraCiano(lblTitInsights), BorderLayout.NORTH);
-
-        JPanel gradeInsights = new JPanel(new GridLayout(2, 2, 10, 8));
-        gradeInsights.setOpaque(false);
-
-        this.lblInsightMaiorReceita = new JLabel("-");
-        this.lblInsightMaiorDespesa = new JLabel("-");
-        this.lblInsightTicketMedio = new JLabel("-");
-        this.lblInsightStatusOrcamento = new JLabel("-");
-
-        gradeInsights.add(criarMiniCardInsight("MAIOR RECEITA", this.lblInsightMaiorReceita, VERDE_RECEITA));
-        gradeInsights.add(criarMiniCardInsight("MAIOR DESPESA", this.lblInsightMaiorDespesa, CORAL_DESPESA));
-        gradeInsights.add(criarMiniCardInsight("TICKET MÉDIO POR ITEM", this.lblInsightTicketMedio, CIANO_VIVO));
-        gradeInsights.add(criarMiniCardInsight("DIAGNÓSTICO DO ORÇAMENTO", this.lblInsightStatusOrcamento, CIANO_VIVO));
-
-        cardInsights.add(gradeInsights, BorderLayout.CENTER);
-
-        painelAnalitico.add(cardGraficoCat);
-        painelAnalitico.add(cardInsights);
-        return painelAnalitico;
     }
 
     private JPanel criarMiniCardInsight(String rotulo, JLabel lblValor, Color corValor) {
@@ -951,471 +1707,6 @@ public class FinanceHubSwingFrame extends JFrame {
         return box;
     }
 
-    // ==================== AÇÕES DOS BOTÕES ====================
-
-    private void acaoSalvarLancamento() {
-        try {
-            String tipo = String.valueOf(this.cmbTipo.getSelectedItem());
-            String descricao = this.txtDescricao.getText().trim();
-            String valorTexto = this.txtValor.getText().trim().replace(",", ".");
-            String dataTexto = this.txtData.getText().trim();
-            Categoria categoria = (Categoria) this.cmbCategoria.getSelectedItem();
-
-            if (valorTexto.isEmpty()) {
-                throw new FinanceHubException("VALOR_VAZIO", "Informe o valor em reais.");
-            }
-
-            BigDecimal valor = new BigDecimal(valorTexto).setScale(2, RoundingMode.HALF_UP);
-            LocalDate data = LocalDate.parse(dataTexto);
-
-            if (this.idEmEdicao == null) {
-                Lancamento novo = "RECEITA".equalsIgnoreCase(tipo)
-                    ? new Receita(null, descricao, valor, data, categoria, this.usuarioAtual.getId())
-                    : new Despesa(null, descricao, valor, data, categoria, this.usuarioAtual.getId());
-                registrarNovoLancamentoInterno(novo);
-            } else {
-                this.gerenciadorLancamentos.atualizar(this.idEmEdicao, tipo, descricao, valor, data, categoria);
-                sincronizarLancamentosNoUsuario();
-            }
-
-            salvarAlteracoes();
-            limparFormularioLancamento();
-            atualizarInterface(null, null);
-        } catch (FinanceHubException e) {
-            mostrarErro("Validação (" + e.getCodigo() + ")", e.getMessage());
-        } catch (Exception e) {
-            mostrarErro("Dados Inválidos", "Verifique o valor numérico e a data (AAAA-MM-DD).\nDetalhe: " + e.getMessage());
-        }
-    }
-
-    private void acaoCarregarLancamentoParaEdicao() {
-        int linha = this.tabelaLancamentos.getSelectedRow();
-        if (linha < 0) {
-            mostrarErro("Seleção Necessária", "Selecione uma linha na tabela para editar.");
-            return;
-        }
-        try {
-            long id = Long.parseLong(String.valueOf(this.modeloTabela.getValueAt(linha, 0)));
-            Lancamento l = this.gerenciadorLancamentos.buscarPorId(id);
-
-            this.idEmEdicao = l.getId();
-            this.lblModoFormulario.setText("Editando Lançamento #" + l.getId());
-            this.cmbTipo.setSelectedItem(l.getTipo());
-            this.txtDescricao.setText(l.getDescricao());
-            this.txtValor.setText(l.getValor().toPlainString());
-            this.txtData.setText(l.getData().toString());
-            if (l.getCategoria() != null) {
-                this.cmbCategoria.setSelectedItem(l.getCategoria());
-            }
-            alternarAbaLateral("ABA_LANCAMENTO", this.btnAbaLancamento);
-        } catch (FinanceHubException e) {
-            mostrarErro("Erro ao Carregar", e.getMessage());
-        }
-    }
-
-    private void acaoDuplicarLancamentoSelecionado() {
-        int linha = this.tabelaLancamentos.getSelectedRow();
-        if (linha < 0) {
-            mostrarErro("Seleção Necessária", "Selecione um lançamento na tabela para duplicar.");
-            return;
-        }
-        try {
-            long id = Long.parseLong(String.valueOf(this.modeloTabela.getValueAt(linha, 0)));
-            Lancamento original = this.gerenciadorLancamentos.buscarPorId(id);
-
-            Lancamento copia = original.isReceita()
-                ? new Receita(null, original.getDescricao() + " (Cópia)", original.getValor(), LocalDate.now(), original.getCategoria(), this.usuarioAtual.getId())
-                : new Despesa(null, original.getDescricao() + " (Cópia)", original.getValor(), LocalDate.now(), original.getCategoria(), this.usuarioAtual.getId());
-
-            registrarNovoLancamentoInterno(copia);
-            salvarAlteracoes();
-            atualizarInterface(null, null);
-        } catch (FinanceHubException e) {
-            mostrarErro("Erro ao Duplicar", e.getMessage());
-        }
-    }
-
-    private void limparFormularioLancamento() {
-        this.idEmEdicao = null;
-        this.lblModoFormulario.setText("Cadastrar Novo Lançamento");
-        this.txtDescricao.setText("");
-        this.txtValor.setText("");
-        this.txtData.setText(LocalDate.now().toString());
-    }
-
-    private void acaoAdicionarCategoria() {
-        try {
-            String nome = this.txtNovaCategoria.getText().trim();
-            long novoId = gerarProximoIdCategoria();
-            Categoria nova = new Categoria(novoId, nome);
-            this.gerenciadorCategorias.cadastrar(nova);
-            salvarAlteracoes();
-            this.txtNovaCategoria.setText("");
-            atualizarInterface(null, null);
-        } catch (Exception e) {
-            mostrarErro("Erro na Categoria", e.getMessage());
-        }
-    }
-
-    private void acaoRemoverCategoria() {
-        int idx = this.lstCategorias.getSelectedIndex();
-        if (idx < 0) {
-            mostrarErro("Seleção Necessária", "Selecione uma categoria na lista para remover.");
-            return;
-        }
-        Categoria selecionada = this.gerenciadorCategorias.listar().get(idx);
-        if (!selecionada.getLancamentos().isEmpty()) {
-            mostrarErro(
-                "Categoria em Uso",
-                "A categoria '" + selecionada.getNome() + "' possui " + selecionada.getLancamentos().size() +
-                " lançamento(s) vinculado(s) e não pode ser removida."
-            );
-            return;
-        }
-        this.gerenciadorCategorias.removerPorId(selecionada.getId());
-        salvarAlteracoes();
-        atualizarInterface(null, null);
-    }
-
-    private void acaoExcluirLancamentoSelecionado() {
-        int linha = this.tabelaLancamentos.getSelectedRow();
-        if (linha < 0) {
-            mostrarErro("Seleção Necessária", "Selecione um lançamento na tabela para excluir.");
-            return;
-        }
-        long id = Long.parseLong(String.valueOf(this.modeloTabela.getValueAt(linha, 0)));
-        if (this.gerenciadorLancamentos.removerPorId(id)) {
-            sincronizarLancamentosNoUsuario();
-            salvarAlteracoes();
-            atualizarInterface(null, null);
-        }
-    }
-
-    private void acaoImportarTextoCsv() {
-        try {
-            String conteudo = this.txtAreaCsv.getText().trim();
-            ArrayList<Lancamento> importados = this.importadorArquivoService.importarDeConteudo(
-                conteudo,
-                this.gerenciadorLancamentos,
-                this.gerenciadorCategorias
-            );
-            sincronizarLancamentosNoUsuario();
-            salvarAlteracoes();
-            atualizarInterface(null, null);
-            JOptionPane.showMessageDialog(this, importados.size() + " lançamento(s) importado(s) com sucesso!");
-        } catch (FinanceHubException e) {
-            mostrarErro("Erro na Importação (" + e.getCodigo() + ")", e.getMessage());
-        }
-    }
-
-    private void acaoImportarArquivoDisco() {
-        JFileChooser chooser = new JFileChooser(Path.of(".").toFile());
-        chooser.setFileFilter(new FileNameExtensionFilter("Arquivos CSV ou TXT", "csv", "txt"));
-        if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            try {
-                Path arquivo = chooser.getSelectedFile().toPath();
-                ArrayList<Lancamento> importados = this.importadorArquivoService.importarDeArquivo(
-                    arquivo,
-                    this.gerenciadorLancamentos,
-                    this.gerenciadorCategorias
-                );
-                sincronizarLancamentosNoUsuario();
-                salvarAlteracoes();
-                atualizarInterface(null, null);
-                JOptionPane.showMessageDialog(this, importados.size() + " lançamento(s) importado(s) de " + arquivo.getFileName());
-            } catch (FinanceHubException e) {
-                mostrarErro("Erro na Leitura do Arquivo", e.getMessage());
-            }
-        }
-    }
-
-    private void acaoExportarArquivoDisco() {
-        JFileChooser chooser = new JFileChooser(Path.of(".").toFile());
-        chooser.setSelectedFile(Path.of("financehub-lancamentos.csv").toFile());
-        if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            try {
-                Path destino = chooser.getSelectedFile().toPath();
-                this.importadorArquivoService.exportarParaArquivo(destino, this.gerenciadorLancamentos.listar());
-                JOptionPane.showMessageDialog(this, "Exportado com sucesso para:\n" + destino.toAbsolutePath());
-            } catch (FinanceHubException e) {
-                mostrarErro("Erro na Exportação", e.getMessage());
-            }
-        }
-    }
-
-    private void acaoConsultarApiCotacao() {
-        BigDecimal usd = this.cotacaoMoedaService.buscarCotacaoDolarAtual();
-        BigDecimal eur = this.cotacaoMoedaService.getUltimaCotacaoEuro();
-        String status = this.cotacaoMoedaService.isObtidaDaApiOnline() ? "AwesomeAPI Online" : "Padrão Local";
-        this.lblCotacaoTopo.setText("  USD R$ " + usd + " | EUR R$ " + eur + " (" + status + ")  ");
-        atualizarInterface(null, null);
-    }
-
-    private void acaoDefinirMetaMensal() {
-        String entrada = JOptionPane.showInputDialog(
-            this,
-            "Informe o limite máximo de despesas mensais (R$):",
-            this.usuarioAtual.getMetaDespesaMensal().toPlainString()
-        );
-        if (entrada != null && !entrada.isBlank()) {
-            try {
-                BigDecimal novaMeta = new BigDecimal(entrada.trim().replace(",", ".")).setScale(2, RoundingMode.HALF_UP);
-                this.usuarioAtual.setMetaDespesaMensal(novaMeta);
-                atualizarInterface(null, null);
-            } catch (Exception e) {
-                mostrarErro("Meta Inválida", "Informe um valor numérico positivo.");
-            }
-        }
-    }
-
-    private void acaoEditarUsuario() {
-        String novoNome = JOptionPane.showInputDialog(this, "Nome do Usuário:", this.usuarioAtual.getNome());
-        if (novoNome != null && !novoNome.isBlank()) {
-            String novoEmail = JOptionPane.showInputDialog(this, "E-mail do Usuário:", this.usuarioAtual.getEmail());
-            if (novoEmail != null && !novoEmail.isBlank()) {
-                this.usuarioAtual.setNome(novoNome);
-                this.usuarioAtual.setEmail(novoEmail);
-                atualizarTextoUsuarioTopo();
-            }
-        }
-    }
-
-    private void acaoAplicarFiltros() {
-        try {
-            String ini = this.txtFiltroInicio.getText().trim();
-            String fim = this.txtFiltroFim.getText().trim();
-            LocalDate dataInicio = ini.isEmpty() ? null : LocalDate.parse(ini);
-            LocalDate dataFim = fim.isEmpty() ? null : LocalDate.parse(fim);
-            atualizarInterface(dataInicio, dataFim);
-        } catch (Exception e) {
-            mostrarErro("Filtro Inválido", "Use o formato AAAA-MM-DD para as datas.");
-        }
-    }
-
-    // ==================== ATUALIZAÇÃO DA TELA E ANÁLISES ====================
-
-    private void atualizarInterface(LocalDate inicio, LocalDate fim) {
-        try {
-            // 1. Atualizar Categorias e seus saldos polimórficos
-            Categoria selecionadaCombo = (Categoria) this.cmbCategoria.getSelectedItem();
-            this.modeloComboCategorias.removeAllElements();
-            this.modeloListaCategorias.clear();
-
-            for (Categoria c : this.gerenciadorCategorias.listar()) {
-                this.modeloComboCategorias.addElement(c);
-                String saldoCat = this.moedaBRL.format(c.calcularSaldo());
-                this.modeloListaCategorias.addElement(
-                    c.getId() + " - " + c.getNome() + "  |  Saldo: " + saldoCat + " (" + c.getLancamentos().size() + " itens)"
-                );
-            }
-            if (selecionadaCombo != null) {
-                this.cmbCategoria.setSelectedItem(selecionadaCombo);
-            }
-
-            // 2. Filtrar lançamentos
-            List<Lancamento> base = (inicio != null && fim != null)
-                ? this.gerenciadorLancamentos.listarPorPeriodo(inicio, fim)
-                : this.gerenciadorLancamentos.listar();
-
-            String termoBusca = this.txtBuscaDescricao != null ? this.txtBuscaDescricao.getText().trim().toLowerCase() : "";
-            String filtroTipo = this.cmbFiltroTipo != null ? String.valueOf(this.cmbFiltroTipo.getSelectedItem()) : "TODOS";
-
-            List<Lancamento> filtrados = new ArrayList<>();
-            for (Lancamento l : base) {
-                boolean bateTexto = termoBusca.isEmpty() || l.getDescricao().toLowerCase().contains(termoBusca);
-                boolean bateTipo = "TODOS".equalsIgnoreCase(filtroTipo) || l.getTipo().equalsIgnoreCase(filtroTipo);
-                if (bateTexto && bateTipo) {
-                    filtrados.add(l);
-                }
-            }
-
-            Relatorio relatorio = GerenciadorLancamentos.calcularRelatorio(filtrados);
-
-            // 3. Atualizar os 5 Cards Superiores
-            this.lblValorReceitas.setText(this.moedaBRL.format(relatorio.getTotalReceitas()));
-            this.lblQtdReceitas.setText(relatorio.getQuantidadeReceitas() + " entrada(s) no período");
-
-            this.lblValorDespesas.setText(this.moedaBRL.format(relatorio.getTotalDespesas()));
-            this.lblQtdDespesas.setText(relatorio.getQuantidadeDespesas() + " saída(s) no período");
-
-            this.lblValorSaldo.setText(this.moedaBRL.format(relatorio.getSaldoTotal()));
-
-            int taxaPoupanca = 0;
-            if (relatorio.getTotalReceitas().compareTo(BigDecimal.ZERO) > 0 && relatorio.getSaldoTotal().compareTo(BigDecimal.ZERO) > 0) {
-                taxaPoupanca = relatorio.getSaldoTotal()
-                    .multiply(new BigDecimal("100"))
-                    .divide(relatorio.getTotalReceitas(), 0, RoundingMode.HALF_UP)
-                    .intValue();
-            }
-            this.lblTaxaPoupanca.setText("Taxa de poupança: " + Math.min(100, Math.max(0, taxaPoupanca)) + "% das receitas");
-            this.barraPoupanca.setValue(Math.min(100, Math.max(0, taxaPoupanca)));
-
-            // Card Meta Mensal
-            BigDecimal meta = this.usuarioAtual.getMetaDespesaMensal();
-            this.lblValorMeta.setText(this.moedaBRL.format(meta));
-            int percMeta = meta.compareTo(BigDecimal.ZERO) > 0
-                ? relatorio.getTotalDespesas().multiply(new BigDecimal("100")).divide(meta, 0, RoundingMode.HALF_UP).intValue()
-                : 0;
-            this.lblDetalheMeta.setText(percMeta + "% do limite utilizado");
-            this.barraMetaGastos.setValue(Math.min(100, percMeta));
-            this.barraMetaGastos.setForeground(percMeta > 100 ? CORAL_DESPESA : (percMeta >= 80 ? AMBAR_ALERTA : VERDE_RECEITA));
-
-            // Card Câmbio Internacional
-            BigDecimal saldoUSD = this.cotacaoMoedaService.converterReaisParaDolar(relatorio.getSaldoTotal());
-            BigDecimal saldoEUR = this.cotacaoMoedaService.converterReaisParaEuro(relatorio.getSaldoTotal());
-            this.lblValorSaldoDolar.setText(this.moedaUSD.format(saldoUSD));
-            this.lblDetalheCambio.setText(String.format("Euro: € %.2f (API Externa)", saldoEUR));
-
-            // Barras de proporção Receitas x Despesas
-            BigDecimal somaMovimentado = relatorio.getTotalReceitas().add(relatorio.getTotalDespesas());
-            if (somaMovimentado.compareTo(BigDecimal.ZERO) > 0) {
-                int percRec = relatorio.getTotalReceitas().multiply(new BigDecimal("100")).divide(somaMovimentado, 0, RoundingMode.HALF_UP).intValue();
-                this.barraReceitas.setValue(percRec);
-                this.barraDespesas.setValue(100 - percRec);
-            } else {
-                this.barraReceitas.setValue(0);
-                this.barraDespesas.setValue(0);
-            }
-
-            this.lblResumoGeral.setText(relatorio.gerarResumoTexto());
-
-            // 4. Preencher Tabela
-            this.modeloTabela.setRowCount(0);
-            for (Lancamento l : filtrados) {
-                String catNome = l.getCategoria() != null ? l.getCategoria().getNome() : "Geral";
-                this.modeloTabela.addRow(new Object[]{
-                    l.getId(),
-                    l.getData().toString(),
-                    l.getTipo(),
-                    l.getResumo(),
-                    catNome,
-                    this.moedaBRL.format(l.calcularImpacto())
-                });
-            }
-
-            // 5. Atualizar Painel Analítico Inferior (Gráfico de Categorias e Insights)
-            atualizarPainelAnaliticoInferior(filtrados, relatorio);
-        } catch (FinanceHubException e) {
-            mostrarErro("Erro no Filtro", e.getMessage());
-        }
-    }
-
-    private void atualizarPainelAnaliticoInferior(List<Lancamento> filtrados, Relatorio relatorio) {
-        // Atualizar barras por categoria
-        this.painelBarrasCategorias.removeAll();
-        BigDecimal maiorModuloCategoria = BigDecimal.ONE;
-        for (Categoria c : this.gerenciadorCategorias.listar()) {
-            BigDecimal mod = c.calcularSaldo().abs();
-            if (mod.compareTo(maiorModuloCategoria) > 0) {
-                maiorModuloCategoria = mod;
-            }
-        }
-
-        for (Categoria c : this.gerenciadorCategorias.listar()) {
-            BigDecimal saldoCat = c.calcularSaldo();
-            int perc = saldoCat.abs().multiply(new BigDecimal("100")).divide(maiorModuloCategoria, 0, RoundingMode.HALF_UP).intValue();
-
-            JPanel linhaCat = new JPanel(new BorderLayout(10, 0));
-            linhaCat.setOpaque(false);
-            linhaCat.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-            linhaCat.setBorder(new EmptyBorder(2, 0, 4, 4));
-
-            JLabel lblNome = new JLabel(c.getNome() + " (" + c.getLancamentos().size() + ")");
-            lblNome.setPreferredSize(new Dimension(130, 20));
-            lblNome.setForeground(TEXTO_CLARO);
-            lblNome.setFont(new Font("Segoe UI", Font.BOLD, 12));
-
-            JProgressBar barraCat = new JProgressBar(0, 100);
-            barraCat.setValue(perc);
-            barraCat.setBackground(BG_CAMPO);
-            barraCat.setForeground(saldoCat.compareTo(BigDecimal.ZERO) >= 0 ? VERDE_RECEITA : CORAL_DESPESA);
-            barraCat.setBorderPainted(false);
-
-            JLabel lblSaldoCat = new JLabel(this.moedaBRL.format(saldoCat), SwingConstants.RIGHT);
-            lblSaldoCat.setPreferredSize(new Dimension(110, 20));
-            lblSaldoCat.setForeground(saldoCat.compareTo(BigDecimal.ZERO) >= 0 ? VERDE_RECEITA : CORAL_DESPESA);
-            lblSaldoCat.setFont(new Font("Segoe UI", Font.BOLD, 12));
-
-            linhaCat.add(lblNome, BorderLayout.WEST);
-            linhaCat.add(barraCat, BorderLayout.CENTER);
-            linhaCat.add(lblSaldoCat, BorderLayout.EAST);
-            this.painelBarrasCategorias.add(linhaCat);
-        }
-        this.painelBarrasCategorias.revalidate();
-        this.painelBarrasCategorias.repaint();
-
-        // Calcular Insights
-        Lancamento maiorRec = null;
-        Lancamento maiorDesp = null;
-        BigDecimal somaValores = BigDecimal.ZERO;
-
-        for (Lancamento l : filtrados) {
-            somaValores = somaValores.add(l.getValor());
-            if (l.isReceita()) {
-                if (maiorRec == null || l.getValor().compareTo(maiorRec.getValor()) > 0) {
-                    maiorRec = l;
-                }
-            } else {
-                if (maiorDesp == null || l.getValor().compareTo(maiorDesp.getValor()) > 0) {
-                    maiorDesp = l;
-                }
-            }
-        }
-
-        this.lblInsightMaiorReceita.setText(
-            maiorRec != null ? maiorRec.getDescricao() + " (" + this.moedaBRL.format(maiorRec.getValor()) + ")" : "Nenhuma receita"
-        );
-        this.lblInsightMaiorDespesa.setText(
-            maiorDesp != null ? maiorDesp.getDescricao() + " (" + this.moedaBRL.format(maiorDesp.getValor()) + ")" : "Nenhuma despesa"
-        );
-
-        if (!filtrados.isEmpty()) {
-            BigDecimal media = somaValores.divide(BigDecimal.valueOf(filtrados.size()), 2, RoundingMode.HALF_UP);
-            this.lblInsightTicketMedio.setText(this.moedaBRL.format(media) + " por lançamento");
-        } else {
-            this.lblInsightTicketMedio.setText("R$ 0,00");
-        }
-
-        if (relatorio.getSaldoTotal().compareTo(BigDecimal.ZERO) < 0) {
-            this.lblInsightStatusOrcamento.setText("Déficit — Despesas superam receitas");
-            this.lblInsightStatusOrcamento.setForeground(CORAL_DESPESA);
-        } else if (relatorio.getTotalDespesas().compareTo(this.usuarioAtual.getMetaDespesaMensal()) > 0) {
-            this.lblInsightStatusOrcamento.setText("Alerta — Limite mensal ultrapassado");
-            this.lblInsightStatusOrcamento.setForeground(AMBAR_ALERTA);
-        } else {
-            this.lblInsightStatusOrcamento.setText("Orçamento Saudável — Dentro da meta");
-            this.lblInsightStatusOrcamento.setForeground(VERDE_RECEITA);
-        }
-    }
-
-    private void sincronizarLancamentosNoUsuario() {
-        this.usuarioAtual.limparLancamentos();
-        for (Lancamento l : this.gerenciadorLancamentos.listar()) {
-            this.usuarioAtual.adicionarLancamento(l);
-        }
-        atualizarTextoUsuarioTopo();
-    }
-
-    private void atualizarTextoUsuarioTopo() {
-        if (this.lblUsuarioTopo != null) {
-            this.lblUsuarioTopo.setText(
-                "Usuário: " + this.usuarioAtual.getNome() + " (" + this.usuarioAtual.getEmail() + ")"
-            );
-        }
-    }
-
-    private long gerarProximoIdCategoria() {
-        long max = 0L;
-        for (Categoria c : this.gerenciadorCategorias.listar()) {
-            if (c.getId() > max) {
-                max = c.getId();
-            }
-        }
-        return max + 1L;
-    }
-
-    // ==================== COMPONENTES AUXILIARES DE ESTILO ====================
-
     private JPanel criarBlocoTituloComBarraCiano(JLabel labelTitulo) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         p.setOpaque(false);
@@ -1428,14 +1719,6 @@ public class FinanceHubSwingFrame extends JFrame {
         labelTitulo.setBorder(new EmptyBorder(0, 8, 0, 0));
         p.add(barraVertical);
         p.add(labelTitulo);
-        return p;
-    }
-
-    private JPanel criarPainelInternoAba() {
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(CARD_CINZA);
-        p.setBorder(new EmptyBorder(14, 16, 14, 16));
         return p;
     }
 
@@ -1462,10 +1745,10 @@ public class FinanceHubSwingFrame extends JFrame {
         txt.setCaretColor(CIANO_VIVO);
         txt.setFont(FONTE_TEXTO);
         txt.setAlignmentX(Component.LEFT_ALIGNMENT);
-        txt.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        txt.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         txt.setBorder(BorderFactory.createCompoundBorder(
             new LineBorder(BORDA_CINZA, 1, true),
-            new EmptyBorder(5, 10, 5, 10)
+            new EmptyBorder(6, 10, 6, 10)
         ));
         return txt;
     }
@@ -1476,7 +1759,7 @@ public class FinanceHubSwingFrame extends JFrame {
         combo.setFont(FONTE_TEXTO);
         combo.setFocusable(false);
         combo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         combo.setBorder(new LineBorder(BORDA_CINZA, 1));
     }
 
@@ -1489,7 +1772,7 @@ public class FinanceHubSwingFrame extends JFrame {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setBorder(BorderFactory.createCompoundBorder(
             new LineBorder(CIANO_ESCURO, 1, true),
-            new EmptyBorder(7, 14, 7, 14)
+            new EmptyBorder(8, 16, 8, 16)
         ));
         return btn;
     }
@@ -1503,7 +1786,7 @@ public class FinanceHubSwingFrame extends JFrame {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setBorder(BorderFactory.createCompoundBorder(
             new LineBorder(BORDA_CINZA, 1, true),
-            new EmptyBorder(6, 12, 6, 12)
+            new EmptyBorder(7, 13, 7, 13)
         ));
         return btn;
     }
@@ -1517,7 +1800,7 @@ public class FinanceHubSwingFrame extends JFrame {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setBorder(BorderFactory.createCompoundBorder(
             new LineBorder(CORAL_DESPESA, 1, true),
-            new EmptyBorder(6, 12, 6, 12)
+            new EmptyBorder(7, 13, 7, 13)
         ));
         return btn;
     }

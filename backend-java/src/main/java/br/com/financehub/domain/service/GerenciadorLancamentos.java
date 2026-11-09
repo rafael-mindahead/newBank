@@ -1,6 +1,7 @@
 package br.com.financehub.domain.service;
 
 import br.com.financehub.domain.exception.FinanceHubException;
+import br.com.financehub.domain.model.Categoria;
 import br.com.financehub.domain.model.Despesa;
 import br.com.financehub.domain.model.Lancamento;
 import br.com.financehub.domain.model.Receita;
@@ -55,8 +56,41 @@ public class GerenciadorLancamentos {
             }
         }
 
+        Categoria cat = lancamento.getCategoria();
+        if (cat != null && !cat.getLancamentos().contains(lancamento)) {
+            cat.adicionarLancamento(lancamento);
+        }
+
         this.lancamentos.add(lancamento);
         return lancamento;
+    }
+
+    public Lancamento atualizar(
+        long id,
+        String novoTipo,
+        String novaDescricao,
+        BigDecimal novoValor,
+        LocalDate novaData,
+        Categoria novaCategoria
+    ) throws FinanceHubException {
+        Lancamento antigo = buscarPorId(id);
+
+        Lancamento atualizado = "RECEITA".equalsIgnoreCase(novoTipo)
+            ? new Receita(id, novaDescricao, novoValor, novaData, novaCategoria, antigo.getUsuarioId())
+            : new Despesa(id, novaDescricao, novoValor, novaData, novaCategoria, antigo.getUsuarioId());
+
+        validarLancamento(atualizado);
+
+        if (antigo.getCategoria() != null) {
+            antigo.getCategoria().removerLancamento(antigo);
+        }
+        if (novaCategoria != null) {
+            novaCategoria.adicionarLancamento(atualizado);
+        }
+
+        int indice = this.lancamentos.indexOf(antigo);
+        this.lancamentos.set(indice, atualizado);
+        return atualizado;
     }
 
     private long gerarProximoId() {
@@ -88,6 +122,9 @@ public class GerenciadorLancamentos {
         for (int i = 0; i < this.lancamentos.size(); i++) {
             Lancamento atual = this.lancamentos.get(i);
             if (atual.getId() != null && atual.getId() == id) {
+                if (atual.getCategoria() != null) {
+                    atual.getCategoria().removerLancamento(atual);
+                }
                 this.lancamentos.remove(i);
                 return true;
             }
@@ -135,14 +172,14 @@ public class GerenciadorLancamentos {
 
         if (lista != null) {
             for (Lancamento lancamento : lista) {
-                // Chamada polimórfica de calcularImpacto()
+                // Chamadas polimórficas (sem uso de instanceof)
                 BigDecimal impacto = lancamento.calcularImpacto();
                 saldoTotal = saldoTotal.add(impacto);
 
-                if (lancamento instanceof Receita) {
+                if (lancamento.isReceita()) {
                     totalReceitas = totalReceitas.add(lancamento.getValor());
                     qtdReceitas++;
-                } else if (lancamento instanceof Despesa) {
+                } else {
                     totalDespesas = totalDespesas.add(lancamento.getValor());
                     qtdDespesas++;
                 }
@@ -152,4 +189,3 @@ public class GerenciadorLancamentos {
         return new Relatorio(totalReceitas, totalDespesas, saldoTotal, qtdReceitas, qtdDespesas);
     }
 }
-

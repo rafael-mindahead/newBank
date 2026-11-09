@@ -5,6 +5,7 @@ import br.com.financehub.domain.model.Categoria;
 import br.com.financehub.domain.model.Despesa;
 import br.com.financehub.domain.model.Lancamento;
 import br.com.financehub.domain.model.Receita;
+import br.com.financehub.persistence.RepositorioDados;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -18,11 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Repositório de persistência em arquivo local para salvar e recuperar objetos
- * quando o banco MySQL não estiver ativo ou para testes locais de persistência.
- * Atende diretamente ao requisito 14 do PjBL (Salvar e recuperar objetos persistentes).
+ * Implementação da interface RepositorioDados para salvar e recuperar objetos
+ * em arquivo local (data/financehub-dados.db).
  */
-public class PersistenciaArquivoRepository {
+public class PersistenciaArquivoRepository implements RepositorioDados {
 
     private final Path arquivoDados;
 
@@ -30,6 +30,7 @@ public class PersistenciaArquivoRepository {
         this.arquivoDados = arquivoDados;
     }
 
+    @Override
     public void salvarObjetos(List<Categoria> categorias, List<Lancamento> lancamentos) throws FinanceHubException {
         if (this.arquivoDados == null) {
             throw new FinanceHubException("ARQUIVO_INVALIDO", "Caminho de persistencia nao informado.");
@@ -74,6 +75,7 @@ public class PersistenciaArquivoRepository {
         }
     }
 
+    @Override
     public DadosPersistidos recuperarObjetos() throws FinanceHubException {
         ArrayList<Categoria> categorias = new ArrayList<>();
         ArrayList<Lancamento> lancamentos = new ArrayList<>();
@@ -108,6 +110,7 @@ public class PersistenciaArquivoRepository {
                     Lancamento lancamento = "RECEITA".equalsIgnoreCase(tipo)
                         ? new Receita(id, descricao, valor, data, cat, usuarioId)
                         : new Despesa(id, descricao, valor, data, cat, usuarioId);
+                    cat.adicionarLancamento(lancamento);
                     lancamentos.add(lancamento);
                 }
             }
@@ -137,22 +140,24 @@ public class PersistenciaArquivoRepository {
         return texto == null ? "" : texto;
     }
 
-    public static class DadosPersistidos {
-        private final ArrayList<Categoria> categorias;
-        private final ArrayList<Lancamento> lancamentos;
+    public static class DadosPersistidos extends RepositorioDados.DadosCarregados {
+        private final ArrayList<Categoria> listaCategorias;
+        private final ArrayList<Lancamento> listaLancamentos;
 
         public DadosPersistidos(ArrayList<Categoria> categorias, ArrayList<Lancamento> lancamentos) {
-            this.categorias = categorias;
-            this.lancamentos = lancamentos;
+            super(categorias, lancamentos);
+            this.listaCategorias = categorias;
+            this.listaLancamentos = lancamentos;
         }
 
+        @Override
         public ArrayList<Categoria> getCategorias() {
-            return this.categorias;
+            return this.listaCategorias;
         }
 
+        @Override
         public ArrayList<Lancamento> getLancamentos() {
-            return this.lancamentos;
+            return this.listaLancamentos;
         }
     }
 }
-

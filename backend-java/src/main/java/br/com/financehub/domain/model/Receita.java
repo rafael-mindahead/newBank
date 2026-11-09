@@ -4,16 +4,17 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class Receita extends Lancamento {
-    public Receita(long id, String descricao, BigDecimal valor, LocalDate data){
+
+    public Receita(long id, String descricao, BigDecimal valor, LocalDate data) {
         super(id, descricao, valor, data);
     }
 
-    public Receita(Long id, String descricao, BigDecimal valor, LocalDate data, Categoria categoria, Long usuarioId){
+    public Receita(Long id, String descricao, BigDecimal valor, LocalDate data, Categoria categoria, Long usuarioId) {
         super(id, descricao, valor, data, categoria, usuarioId);
     }
 
     @Override
-    public BigDecimal calcularImpacto(){
+    public BigDecimal calcularImpacto() {
         return this.getValor();
     }
 
@@ -23,7 +24,12 @@ public class Receita extends Lancamento {
     }
 
     @Override
-    public String getResumo(){
+    public boolean isReceita() {
+        return true;
+    }
+
+    @Override
+    public String getResumo() {
         return "Receita: " + super.getResumo();
     }
 }

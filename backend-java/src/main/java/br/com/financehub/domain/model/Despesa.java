@@ -4,16 +4,17 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class Despesa extends Lancamento {
-    public Despesa(long id, String descricao, BigDecimal valor, LocalDate data){
+
+    public Despesa(long id, String descricao, BigDecimal valor, LocalDate data) {
         super(id, descricao, valor, data);
     }
 
-    public Despesa(Long id, String descricao, BigDecimal valor, LocalDate data, Categoria categoria, Long usuarioId){
+    public Despesa(Long id, String descricao, BigDecimal valor, LocalDate data, Categoria categoria, Long usuarioId) {
         super(id, descricao, valor, data, categoria, usuarioId);
     }
 
     @Override
-    public BigDecimal calcularImpacto(){
+    public BigDecimal calcularImpacto() {
         return this.getValor().negate();
     }
 
@@ -23,8 +24,12 @@ public class Despesa extends Lancamento {
     }
 
     @Override
-    public String getResumo(){
-        return "Despesa: " + super.getResumo();
+    public boolean isReceita() {
+        return false;
     }
 
+    @Override
+    public String getResumo() {
+        return "Despesa: " + super.getResumo();
+    }
 }

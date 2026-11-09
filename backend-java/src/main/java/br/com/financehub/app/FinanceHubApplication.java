@@ -8,41 +8,34 @@ import java.awt.GraphicsEnvironment;
 import java.nio.file.Path;
 
 /**
- * Ponto de entrada principal do FinanceHub.
- * - Em ambientes locais com interface de vídeo (Desktop), inicia o Servidor HTTP e abre a Janela Java Swing.
- * - Em servidores e nuvem (modo headless sem monitor), executa exclusivamente como Servidor HTTP / API REST.
+ * Classe principal de inicialização do FinanceHub.
  */
 public class FinanceHubApplication {
 
-    public static void main(String[] args) throws Exception {
-        int porta = 8080;
-        String portaEnv = System.getenv("PORT");
-        if (portaEnv != null && !portaEnv.isBlank()) {
-            porta = Integer.parseInt(portaEnv.trim());
-        }
-
+    public static void main(String[] args) {
         Path arquivoPersistencia = Path.of("data", "financehub-dados.db");
 
-        // 1. Inicia o Servidor HTTP / API REST
-        FinanceHubHttpServer server = new FinanceHubHttpServer(porta, arquivoPersistencia);
-        server.iniciar();
-
-        System.out.println("======================================================");
-        System.out.println(" FinanceHub Backend Java 21 iniciado com sucesso!");
-        System.out.println(" Porta HTTP ativa: " + server.getPorta());
-        System.out.println(" API REST disponivel em:");
-        System.out.println(" -> http://localhost:" + server.getPorta() + "/api/v1/health");
-        System.out.println(" -> http://localhost:" + server.getPorta() + "/api/v1/relatorios");
-        System.out.println("======================================================");
-
-        // 2. Se houver ambiente gráfico de tela (Desktop), abre a janela Java Swing
+        // No computador (com tela), abre diretamente a interface gráfica Java Swing
         if (!GraphicsEnvironment.isHeadless()) {
             SwingUtilities.invokeLater(() -> {
                 FinanceHubSwingFrame frame = new FinanceHubSwingFrame(arquivoPersistencia);
                 frame.setVisible(true);
             });
-        } else {
-            System.out.println("Ambiente Headless (Servidor Nuvem) detectado. Interface grafica Swing desativada.");
+            return;
+        }
+
+        // Em servidor sem tela (modo Headless / Docker), inicia a API HTTP
+        try {
+            int porta = 8080;
+            String portaEnv = System.getenv("PORT");
+            if (portaEnv != null && !portaEnv.isBlank()) {
+                porta = Integer.parseInt(portaEnv.trim());
+            }
+            FinanceHubHttpServer server = new FinanceHubHttpServer(porta, arquivoPersistencia);
+            server.iniciar();
+            System.out.println("FinanceHub API iniciada na porta " + server.getPorta());
+        } catch (Exception e) {
+            System.err.println("Erro ao iniciar servidor HTTP: " + e.getMessage());
         }
     }
 }

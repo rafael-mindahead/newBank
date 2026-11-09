@@ -4,8 +4,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 
+/**
+ * Classe abstrata que representa um lançamento financeiro (Receita ou Despesa).
+ */
 public abstract class Lancamento {
-    
+
     private Long id;
     private String descricao;
     private BigDecimal valor;
@@ -13,11 +16,11 @@ public abstract class Lancamento {
     private Categoria categoria;
     private Long usuarioId;
 
-    public Lancamento(Long id, String descricao, BigDecimal valor, LocalDate data){
+    public Lancamento(Long id, String descricao, BigDecimal valor, LocalDate data) {
         this(id, descricao, valor, data, null, 1L);
     }
 
-    public Lancamento(Long id, String descricao, BigDecimal valor, LocalDate data, Categoria categoria, Long usuarioId){
+    public Lancamento(Long id, String descricao, BigDecimal valor, LocalDate data, Categoria categoria, Long usuarioId) {
         this.id = id;
         this.descricao = descricao;
         this.valor = valor;
@@ -30,7 +33,9 @@ public abstract class Lancamento {
 
     public abstract String getTipo();
 
-    public String getResumo(){
+    public abstract boolean isReceita();
+
+    public String getResumo() {
         return this.descricao + " - R$ " + this.valor;
     }
 
@@ -47,7 +52,10 @@ public abstract class Lancamento {
     }
 
     public void setDescricao(String descricao) {
-        this.descricao = descricao;
+        if (descricao == null || descricao.isBlank()) {
+            throw new IllegalArgumentException("A descricao nao pode ser vazia");
+        }
+        this.descricao = descricao.trim();
     }
 
     public BigDecimal getValor() {
@@ -55,6 +63,9 @@ public abstract class Lancamento {
     }
 
     public void setValor(BigDecimal valor) {
+        if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("O valor deve ser maior que zero");
+        }
         this.valor = valor;
     }
 
@@ -70,6 +81,9 @@ public abstract class Lancamento {
     }
 
     public void setData(LocalDate data) {
+        if (data == null) {
+            throw new IllegalArgumentException("A data nao pode ser nula");
+        }
         this.data = data;
     }
 
